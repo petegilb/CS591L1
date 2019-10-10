@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta content="all" name="robots" />
+    <title>BU CAS CS 591 L1 Fall 2019</title>
+    <style>
+    body { font-family:Verdana,Arial,Sans-serif; font-size:12px; }
+    h4 { display:block; margin:15px 0px 0px 0px; }
+    h5 { display:block; margin:0px 0px 30px 0px; font-size:12px; }
+    a { text-decoration:none; color:#AC701E; }
+    a:hover { text-decoration:underline; color:firebrick; }
+    #container { margin:8px; }
+    #container #info { float:left; display:inline-block; margin:8px 24px 8px 8px; max-width: 400px;}
+
+    #container #info > ul { margin-left:10px; padding:0px; }
+    #container #info > ul > li { list-style-type:none; margin-bottom:15px; padding:0px; text-indent:-10px; line-height:140%; }
+    #container #info > ul > li:before { content:"--\00a0"; color:#BBBBBB; }
+    #container #info > ul > li > span { color:#888888; }
+    #container #info > ul > li > ul { padding:0px 0px 0px 12px; }
+    #container #info > ul > li > ul > li { list-style-type:none; margin:0px 0px 0px 5px; text-indent:0px; }
+    #container #info > ul > li > ul > li > span { font-weight:bold; color:#555555; }
+    #container #info > ul > li > ol { padding:0px 0px 0px 12px; }
+    #container #info > ul > li > ol > li { list-style-type:none; margin:16px 0px 0px 5px; text-indent:0px; }
+    #container #info > ul > li > ol > li span { font-weight:bold; color:#555555; }
+
+    #container table ul { margin:0px 5px -1px 10px; padding:0px; }
+    #container table ul li { list-style-type:none; padding:0px; text-indent:-10px; line-height:140%; }
+    #container table ul li:before { content:"-\00a0"; color:#BBBBBB; }
+    #container table ul li ul { margin-left:-2px; }
+    #container table ul li ul li { list-style-type:none; margin:0px 0px 0px 5px; text-indent:0px; }
+
+    #container table { float:left; display:inline-block; margin:20px 0px 15px 10px; border-collapse:collapse; }
+    #container table tr td { border:1px solid #CCCCCC; padding:6px; }
+    #container table tr td .date-with-coordinates { text-decoration:underline; }
+    #container table tr td .coordinates { font-size:10px; }
+    #container table tr td:first-of-type > div > span { display:block; }
+    #container table .lecture td .type { color:#AAAAAA; }
+    #container table .recess { color:#AAAAAA; font-style:italic; }
+    #container table .recess td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
+    #container table .canceled { color:#AAAAAA; font-style:italic; }
+    #container table .canceled td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
+    #container table .office-hours { color:#AAAAAA; font-style:italic; }
+    #container table .office-hours td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
+    #container table .schedule-substitution { color:#AAAAAA; font-style:italic; }
+    #container table .schedule-substitution td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
+    #container table .assignment { }
+    #container table .assignment td .type { color:#AAAAAA; }
+    #container table .assignment td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
+    #container table .project { }
+    #container table .project td .type { color:#AAAAAA; }
+    #container table .project td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
+    #container table .quiz { color:firebrick; font-weight:bold; }
+    #container table .midterm { color:firebrick; font-weight:bold; }
+    #container table .final { color:firebrick; font-weight:bold; }
+    #container table .exam { color:firebrick; font-weight:bold; }
+    #container table .poster { color:firebrick; font-weight:bold; }
+    #container table .session { color:firebrick; font-weight:bold; }
+    #container table .review { font-weight:bold; }
+    #container table .upcoming { background-color:#F9EFE1; }
+    @media all and (max-width:500px) {
+      body { margin:0px; padding:0px; font-size:8px; }
+      h5 { font-size:8px; }
+      #container { margin:0px; }
+      #container #info { float:left; display:inline-block; margin:0px 24px 8px 14px; }
+      #container table { }
+      #container table tr td:first-of-type { font-size:8px; }
+      #container table tr td:nth-of-type(2) { font-size:6px; }
+      #container table tr td .coordinates { font-size:6px; }
+    }
+    </style>
+    <script>
+    var LINK_PREFIX = 'https://lapets.github.io/course-embedded-languages-and-frameworks/';
+    var course = {
+      'schedule': [
+        { 'date': '2019-09-03',
+          'type': 'lecture',
+          'topics': 'introduction',
+          'notes': 'lecture-01-languages-parsing-asts.html',
+          'details': [
+            'introduction, background, and goals',
+            'organization, tools, and workflows',
+            'formal definitions of languages'
+          ]
+        }
+        ,
+        { 'date': '2019-09-05',
+          'type': 'lecture',
+          'topics': 'languages',
+          'details': [
+            'concrete syntax',
+            'context-free grammars (CFGs)',
+            'BNF notation',
+            'parsing and abstract syntax'  
+          ]
+        }
+        ,
+        { 'date': '2019-09-10',
+          'type': 'lecture',
+          'topics': 'parsing &amp;<br/> parsers',
+          'notes': 'lecture-02-semantics-transformations-analysis.html',
+          'details': [
+            'more on abstract syntax trees',
+            'working with ASTs in Python',
+            'denotational &amp; operational semantics',
+            'inference rule notation'
+          ]
+        }
+        ,
+        { 'date': '2019-09-12',
+          'type': 'lecture',
+          'topics': 'semantics &amp;<br/>interpretation',
+          'details': [
+            'working with ASTs in JavaScript',
+            'interpretation',
+            'compilation &amp; transpilation',
+            'optimization'
+          ]
+        }
+        ,
+        { 'date': '2019-09-17',
+          'type': 'lecture',
+          'topics': 'static analysis',
+          'details': [
+            'more on transformations',
+            'environments &amp; contexts'
+          ]
+        }
+        ,
+        { 'date': '2019-09-19',
+          'type': 'lecture',
+          'topics': 'type systems &amp;<br/>polymorphism',
+          'notes': 'lecture-03-more-on-type-systems-and-polymorphism.html',
+          'details': [
+            'representation of Python types',
+            'kinds of polymorphism',
+            'ad hoc polymorphism in Python'
+          ]
+        }
+        ,
+        { 'date': '2019-09-26',
+          'type': 'canceled'
+        }
+        ,
+        { 'date': '2019-09-27',
+          'time': '11:59 PM EDT',
+          'type': 'project',
+          'details': [
+            '<b><a href="'+LINK_PREFIX+'project-2019-09-27.html">project #1</a> due</b>'
+            //'<b>project #1 due</b>'
+          ]
+        }
+        ,
+        { 'date': '2019-10-01',
+          'type': 'lecture',
+          'topics': 'evaluation<br/>strategies',
+          'notes': 'lecture-04-evaluation-strategies-in-operational-semantics.html',
+          'details': [
+          ]
+        },
+        { 'date': '2019-10-03',
+          'type': 'canceled'
+        }
+        ,
+        { 'date': '2019-10-8',
+          'type': 'lecture',
+          'topics': 'embeddings',
+          'notes': '',
+          'source': '',
+          'details': [
+            '<a href="http://composition.al/blog/2015/06/02/embedding-deep-and-shallow/">shallow and deep embeddings</a>',
+            'external embeddings'
+          ]
+        }
+      ]
+    };
+
+    function render_schedule(course) {
+      var table = document.getElementById("schedule");
+      var alreadyHighlighted = false;
+      for (var i = 0; i < course.schedule.length; i++) {
+        var entry = course.schedule[i];
+
+        var row = table.insertRow(-1);
+        var upcoming = today() <= entry.date && !alreadyHighlighted ? ' upcoming' : '';
+        alreadyHighlighted = alreadyHighlighted || (upcoming.length > 0);
+        row.className = entry.type + upcoming;
+
+        var date = row.insertCell(-1);
+        var coordinates =
+          (entry.day ? ('<span>' + entry.day + '</span>') : '') +
+          (entry.time ? ('<span>' + entry.time + '</span>') : '') +
+          (entry.location ? ('<span>' + entry.location + '</span>') : '') +
+          (entry.comment ? ('<span>' + entry.comment + '</span>') : '');
+        date.innerHTML = 
+          coordinates ?
+              ('<span class="date-with-coordinates">' + entry.date + '</span>' + '<div class="coordinates">' + coordinates + '</div>')
+            : entry.date;
+
+        var type = row.insertCell(-1);
+        type.innerHTML = 
+            '<span class="type">' + entry.type.replace(' ','<br/>').replace('-','<br/>') + 
+            (entry.topics ? (':</span>' + '<br/>' + entry.topics) : '');
+
+        if (entry.notes) {
+          type.innerHTML += '<br><a href="'+LINK_PREFIX + entry.notes+'">lecture notes</a>';
+        } else if (entry.notes === '') {
+          type.innerHTML += '<br><span class="type">in progress</span></b>';
+        }
+
+        var details = row.insertCell(-1);
+        details.innerHTML = render_details(entry.details);
+      }
+    }
+
+    function render_details(details) {
+      if (details == null) {
+        return "";
+      } else if (typeof details === 'string') {
+        return details;
+      } else if (details.constructor === Array) {
+        var output = '';
+        for (var j = 0; j < details.length; j++)
+          output += '<li>' + render_details(details[j]) + '</li>';
+        return '<ul>' + output + '</ul>';
+      } else {
+        for (var txt in details)
+          return txt + render_details(details[txt]);
+      }
+    }
+
+    function today() {
+      var now = new Date();
+      var dd = now.getDate(), 
+          mm = now.getMonth() + 1,
+          yyyy = now.getFullYear();  
+      dd = (dd < 10 ? '0' : '') + dd;
+      mm = (mm < 10 ? '0' : '') + mm;
+      return yyyy+'-'+mm+'-'+dd;
+    }
+  </script>
+  </head>
+  <body onload="render_schedule(course);">
+    <div id="container">
+      <div id="info">
+        <h2>BU CAS Computer Science 591 L1<br/>Embedded Languages &amp; Frameworks</h2>
+        <h3>Logistics</h3>
+        <ul>
+          <li><span>lectures:</span>
+            <ul>
+              <li>Tue. &amp; Thu., 9:30 - 10:45 AM in <a href="http://www.bu.edu/hic/directions/">MCS 180</a></li>
+              <li><span>lecturers:</span> <ul>
+                <li> <b><a href="http://cs-people.bu.edu/lapets">Andrei Lapets</a></b>  (<a href="mailto:lapets@bu.edu">lapets@bu.edu</a>, MCS 173), until October 4 2019</li>
+                <li> <a href="http://cs-people.bu.edu/babman/">Kinan Dak Albab</a> (<a href="mailto:babman@bu.edu">babman@bu.edu</a>, MCS 173) as of October 4 2019</li>
+                <li> <a href="https://cs-people.bu.edu/ra1issa/">Rawane Issa</a> (<a href="mailto:ra1issa@bu.edu">ra1issa@bu.edu</a>, MCS 173) as of October 4 2019</li>
+              </ul>
+              <li><span>OH:</span> Thu. 11 - 1 PM <!--at <a href="http://www.bu.edu/cs/resources/laboratories/undergraduate-lab/">CS lab</a>--></li>
+            </ul>
+          </li>
+          <li><span>questions and discussion:</span>
+            <ul>
+              <li><a href="mailto:cascs591l1-l@bu.edu">cascs591l1-l@bu.edu</a> (course mailing list)</li>
+              <li><a href="https://piazza.com/bu/fall2019/cs591l1">Q&amp;A page</a> on Piazza</li>
+            </ul>
+          </li>
+          <li><span>project submission policies:</span>
+            <ul>
+              <li><span>submission:</span> by 11:59 PM on due date (via GitHub)<!--(via <a href="s.php#A.1">GitHub</a>)--></li>
+              <li><span>collaboration:</span> list all collaborators outside of group</li>
+              <li><span>late policy</span>: -15 points per day, 3 days maximum</li>
+            </ul>
+          </li>
+          <li><span>course grade:</span>
+            <ul>
+              <li>20% <i>exams</i> + 80% <i>projects</i></li>
+            </ul>
+          </li>
+          <li><span>course materials:</span>
+            <ul>
+              <!--li>to be posted</li-->
+              <li><a href="https://github.com/KinanBab/CS591L1---Embedded-Languages-And-Frameworks">lecture notes</a> <!--(w/ projects &amp; organization notes)--></li>
+              <li><b><a href="https://lapets.github.io/course-embedded-languages-and-frameworks/project-2019-09-27.html">project #1</a></b></li>
+              <!--li><b><a href="s.php?#project2">project #2</a></b></li>
+              <li><b><a href="s.php?#project3">project #3</a></b></li-->
+              <!--li><b><a href="s.php?#project4">project #4</a></b></li-->
+            </ul>
+          </li>
+          <li><span>software used in the course:</span>
+            <ul>
+              <li><a href="https://www.python.org/downloads/">Python 3.6</a>+</li>
+              <li><a href="https://nodejs.org/">Node.js 10</a>+</li>
+            </ul>
+          </li>
+          <!--li><span>other reading materials (not required):</span>
+            <ol>
+              <li><b><a href="http://www.shoup.net/ntb/ntb-v2.pdf">A Computational Introduction to<br/>Number Theory and Algebra.</a></b><br/>Victor Shoup.</li>
+              <li><b><a href="http://www.cs.bu.edu/faculty/gacs/courses/cs235/lectures/notes.pdf">Algebraic algorithms.</a></b><br/>Course notes by P&#0233;ter G&#0225;cs.</li>
+              <li><b><a href="http://cs-people.bu.edu/evimaria/cs131-11/mathcs.pdf">Mathematics for Computer Science.</a></b><br/>Eric Lehman and Tom Leighton.</li>
+              <li><b>A Concrete Introduction to Higher Algebra.</b><br/>Lindsay Childs.</li>
+              <li><b>The Higher Arithmetic:<br/>An Introduction to the Theory of Numbers.</b><br/>H. Davenport.<li>
+            </ol>
+          </li-->
+        </ul>
+
+        <ul>
+          <li><span>academic conduct codes:</span>
+            <ul>
+              <li><a href="https://www.bu.edu/academics/policies/academic-conduct-code/">for undergraduate students</a></li>
+              <li><a href="https://www.bu.edu/academics/grs/policies/academic-conduct/">for graduate students</a></li>
+            </ul>
+          </li>
+        </ul>
+        
+        <h3>Syllabus</h3>
+        <ul>
+          <li><span>Overview:</span>
+            Modern frameworks and libraries for domains such as cybersecurity, machine learning, and others are complex and encompess a large set of features.
+            Such frameworks may extend their host language syntax or semantics, and may alter the programming methodology common in the host language's community.
+            Developers of such frameworks and libraries sometime resort to creating their own custom domain specific language (DSL), and requiring users to express
+            their programs within that DSL. Such frameworks are accompanied by a toolchain (e.g. a compiler or interpreter) that transforms programs written in such
+            a DSL into some runnable form. <br>
+            
+            Alternatively, developers of such frameworks can choose to "embed" their framework within a popular host language. Successful embedding allow users to
+            encode arbitrary interactions between any combination of the framework and host language constructs. Such embedding can lead to interesting results, as
+            the embedding language may alter the host language syntax or semantics. <br>
+            
+            In this course, we systemetically explore the space of embedded languages and frameworks. We identify and distinguish categories of embeddings. These
+            include shallow, deep, and external embedding. We study the tradeoffs between these categories from the perspective of language developers and users.
+            The course overviews methodologies and paradigms for developing such embeddings, including polymorphism, reflection, and composition. We overview standard
+            programming languages concepts and techniques that guide our exploration, such as parsing, program semantics, interpretation, static analysis, type systems,
+            and programming paradigms. <br>
+            
+            Relevant external resources that discuss embedded DSL include This
+            <a href="https://en.wikipedia.org/wiki/Domain-specific_language#External_and_Embedded_Domain_Specific_Languages">wikipedia article</a> and
+            <a href="https://www.cs.cmu.edu/~jyang2/courses/fall16/15819/">CMU Course</a>. There are many examples of popular embedded framework and languages in use
+            today including: Regular expressions, JSON, JQuery, TensorFlow, SQLAlchemy, JavaScript Promise API, Cryptography libraries, Android's XML layouting
+            language, etc.
+          </li>
+          <li><span>Learning Outcome:</span>
+            <ul>
+              <li>1. Become familiar with various embedding techniques and identify their tradeoffs, including comparison to non-embedding DSL techniques.</li>
+              <li>2. Gain experience implementing embedded frameworks and languages using various embedding techniques.</li>
+              <li>3. Employ the course's concepts to better use and extend existing embedded frameworks and languages.</li>
+            </ul>
+          </li>
+        </ul>
+        
+      </div>
+      <table id="schedule"></table>
+    </div>
+  </body>
+</html>
