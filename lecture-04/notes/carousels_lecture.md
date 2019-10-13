@@ -350,7 +350,7 @@ var visitorPattern = {
       "exit": function (p) {
         var start = p.node.loc.start, op = p.node.operator;
         if (op in costs) {
-          p.node.metric = [p.node.left, p.node.right].reduce(plus, costs[op]);
+          p.node.metric = [p.node.left, p.node.right].reduce(plusPolynomial, costs[op]);
         } else {
           throw Error("Node type BinaryExpression with operator " + op +
                       " is not handled at line " + start.line + ", column " + start.column + ".");
@@ -362,13 +362,13 @@ var visitorPattern = {
       "exit": function (p) { p.node.metric = p.node.body.metric; }
     },
     BlockStatement: { // a block statement's cost is the sum of the cost of all its content
-      "exit": function (p) { p.node.metric = p.node.body.reduce(plus, zero); }
+      "exit": function (p) { p.node.metric = p.node.body.reduce(plusPolynomial, zeroPolynomial); }
     },
     Identifier: {
-      "exit": function (p) { p.node.metric = zero; }
+      "exit": function (p) { p.node.metric = zeroPolynomial; }
     },
     VariableDeclaration: {
-      "exit": function (p) { p.node.metric = p.node.declarations.reduce(plus, zero); }
+      "exit": function (p) { p.node.metric = p.node.declarations.reduce(plusPolynomial, zeroPolynomial); }
     },
     VariableDeclarator: {
       "exit": function (p) { p.node.metric = p.node.init.metric; }
@@ -377,7 +377,7 @@ var visitorPattern = {
       "exit": function (p) { p.node.metric = p.node.argument.metric; }
     },
     NumericLiteral: {
-      "exit": function (p) { p.node.metric = zero; }
+      "exit": function (p) { p.node.metric = zeroPolynomial; }
     }
   }
 };
