@@ -1,7 +1,9 @@
-# carousel_lecture
+# Babel and Carousels: parsing and analyzing Javascript code
 
-npm install
+Follow these commands to run the lecture notes localy
 
-node index.js
-
-open index.html
+```bash
+npm install  # install dependencies
+node index.js  # run neptune notebook
+# open http://localhost:8080/document/carousels in your browser while index.js is running
+```
