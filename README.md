@@ -4,6 +4,8 @@ Materials for a computer science course on embedded languages and frameworks.
 
 Course website: [https://kinanbab.github.io/CS591L1/website](https://kinanbab.github.io/CS591L1/website)
 
+**Please run `git submodule init && git submodule update` after cloning this repo.**
+
 ## Lecture Notes
 
 This repository contains all lecture notes from CS591L1. Most notes are notebooks that run interactive code in the browser.
@@ -35,3 +37,14 @@ jupyter notebook  # will open a tab in your browser showing the lecture notes
 ```
 
 Using Jupyter notebook is very intuitive, if you have not used one before, please look at this [tutorial](https://www.codecademy.com/articles/how-to-use-jupyter-notebooks).
+
+#### Lecture Notes in Javascript / Neptune Notebook
+
+Make sure you have nodejs (>= 8) and npm installed. To run the javascript [Neptune Notebook](https://www.npmjs.com/package/neptune-notebook) lecture notes locally, follow these commands:
+
+```bash
+cd <path/to/repository/and/lecture>
+npm install  # install node/javascript dependencies
+node index.js  # run neptune notebook
+# ^ open the output URL of this command in your browser to view and run the notes
+```
