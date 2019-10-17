@@ -41,6 +41,8 @@
     #container table .recess td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
     #container table .canceled { color:#AAAAAA; font-style:italic; }
     #container table .canceled td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
+    #container table .noclass { color:#AAAAAA; font-style:italic; }
+    #container table .noclass td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
     #container table .office-hours { color:#AAAAAA; font-style:italic; }
     #container table .office-hours td:first-child { color:#AAAAAA; font-weight:normal; font-style:italic; }
     #container table .schedule-substitution { color:#AAAAAA; font-style:italic; }
@@ -73,125 +75,138 @@
     <script>
     var LINK_PREFIX = 'html/';
     var course = {
-      'schedule': [
-        { 'date': '2019-09-03',
-          'type': 'lecture',
-          'topics': 'introduction',
-          'notes': 'lecture-01-languages-parsing-asts.html',
-          'details': [
-            'introduction, background, and goals',
-            'organization, tools, and workflows',
-            'formal definitions of languages'
-          ]
-        }
-        ,
-        { 'date': '2019-09-05',
-          'type': 'lecture',
-          'topics': 'languages',
-          'details': [
-            'concrete syntax',
-            'context-free grammars (CFGs)',
-            'BNF notation',
-            'parsing and abstract syntax'  
-          ]
-        }
-        ,
-        { 'date': '2019-09-10',
-          'type': 'lecture',
-          'topics': 'parsing &amp;<br/> parsers',
-          'notes': 'lecture-02-semantics-transformations-analysis.html',
-          'details': [
-            'more on abstract syntax trees',
-            'working with ASTs in Python',
-            'denotational &amp; operational semantics',
-            'inference rule notation'
-          ]
-        }
-        ,
-        { 'date': '2019-09-12',
-          'type': 'lecture',
-          'topics': 'semantics &amp;<br/>interpretation',
-          'details': [
-            'working with ASTs in JavaScript',
-            'interpretation',
-            'compilation &amp; transpilation',
-            'optimization'
-          ]
-        }
-        ,
-        { 'date': '2019-09-17',
-          'type': 'lecture',
-          'topics': 'static analysis',
-          'details': [
-            'more on transformations',
-            'environments &amp; contexts'
-          ]
-        }
-        ,
-        { 'date': '2019-09-19',
-          'type': 'lecture',
-          'topics': 'type systems &amp;<br/>polymorphism',
-          'notes': 'lecture-03-more-on-type-systems-and-polymorphism.html',
-          'details': [
-            'representation of Python types',
-            'kinds of polymorphism',
-            'ad hoc polymorphism in Python'
-          ]
-        }
-        ,
-        { 'date': '2019-09-24',
-          'type': 'lecture',
-          'topics': 'javascript<br/>transformation<br/>&amp; analysis',
-          'notes': 'lecture-04-babel-carousels.html',
-          'details': [
-            'transform and analyze <br/>javascript using <a href="https://babeljs.io/">babel</a>',
-            'cost estimation of javascript<br/>programs using carousels'
-          ]
-        }
-        ,
-        { 'date': '2019-09-26',
-          'type': 'canceled'
-        }
-        ,
-        { 'date': '2019-09-27',
-          'time': '11:59 PM EDT',
-          'type': 'project',
-          'details': [
-            '<b><a href="'+LINK_PREFIX+'project-2019-09-27.html">project #1</a> due</b>'
-            //'<b>project #1 due</b>'
-          ]
-        }
-        ,
-        { 'date': '2019-10-01',
-          'type': 'lecture',
-          'topics': 'evaluation<br/>strategies',
-          'notes': 'lecture-05-evaluation-strategies-in-operational-semantics.html',
-          'details': [
+      "schedule": [
+        {
+          "date": "2019-09-03",
+          "type": "lecture",
+          "topics": "introduction",
+          "notes": "lecture-01-languages-parsing-asts.html",
+          "details": [
+            "introduction, background, and goals",
+            "organization, tools, and workflows",
+            "formal definitions of languages"
           ]
         },
-        { 'date': '2019-10-03',
-          'type': 'canceled'
-        }
-        ,
-        { 'date': '2019-10-8',
-          'type': 'lecture',
-          'topics': 'embeddings',
-          'notes': 'lecture-06-embeddings.html',
-          'details': [
-            '<a href="http://composition.al/blog/2015/06/02/embedding-deep-and-shallow/">shallow and deep embeddings</a>',
-            'external embeddings'
+        {
+          "date": "2019-09-05",
+          "type": "lecture",
+          "topics": "languages",
+          "details": [
+            "concrete syntax",
+            "context-free grammars (CFGs)",
+            "BNF notation",
+            "parsing and abstract syntax"
           ]
-        }
-        ,
-        { 'date': '2019-10-10',
-          'type': 'lecture',
-          'topics': 'programming<br/>paradigms',
-          'notes': 'lecture-07-programming-paradigms.html',
-          'details': [
-            'object-oriented programming',
-            'meta-programming: reflection',
-            'instrumentation',
-            'aspect-oriented programming'
+        },
+        {
+          "date": "2019-09-10",
+          "type": "lecture",
+          "topics": "parsing &amp;<br/> parsers",
+          "notes": "lecture-02-semantics-transformations-analysis.html",
+          "details": [
+            "more on abstract syntax trees",
+            "working with ASTs in Python",
+            "denotational &amp; operational semantics",
+            "inference rule notation"
+          ]
+        },
+        {
+          "date": "2019-09-12",
+          "type": "lecture",
+          "topics": "semantics &amp;<br/>interpretation",
+          "details": [
+            "working with ASTs in JavaScript",
+            "interpretation",
+            "compilation &amp; transpilation",
+            "optimization"
+          ]
+        },
+        {
+          "date": "2019-09-17",
+          "type": "lecture",
+          "topics": "static analysis",
+          "details": [
+            "more on transformations",
+            "environments &amp; contexts"
+          ]
+        },
+        {
+          "date": "2019-09-19",
+          "type": "lecture",
+          "topics": "type systems &amp;<br/>polymorphism",
+          "notes": "lecture-03-more-on-type-systems-and-polymorphism.html",
+          "details": [
+            "representation of Python types",
+            "kinds of polymorphism",
+            "ad hoc polymorphism in Python"
+          ]
+        },
+        {
+          "date": "2019-09-24",
+          "type": "lecture",
+          "topics": "javascript<br/>transformation<br/>&amp; analysis",
+          "notes": "lecture-04-babel-carousels.html",
+          "details": [
+            "transform and analyze <br/>javascript using <a href=\"https://babeljs.io/\">babel</a>",
+            "cost estimation of javascript<br/>programs using carousels"
+          ]
+        },
+        {
+          "date": "2019-09-26",
+          "type": "canceled"
+        },
+        {
+          "date": "2019-09-27",
+          "time": "11:59 PM EDT",
+          "type": "project",
+          "details": [
+            "<b><a href=\""+LINK_PREFIX+"project-2019-09-27.html\">project #1</a> due</b>"
+          ]
+        },
+        {
+          "date": "2019-10-01",
+          "type": "lecture",
+          "topics": "evaluation<br/>strategies",
+          "notes": "lecture-05-evaluation-strategies-in-operational-semantics.html",
+          "details": []
+        },
+        {
+          "date": "2019-10-03",
+          "type": "canceled"
+        },
+        {
+          "date": "2019-10-8",
+          "type": "lecture",
+          "topics": "embeddings",
+          "notes": "lecture-06-embeddings.html",
+          "details": [
+            "<a href=\"http://composition.al/blog/2015/06/02/embedding-deep-and-shallow/\">shallow and deep embeddings</a>",
+            "external embeddings"
+          ]
+        },
+        {
+          "date": "2019-10-10",
+          "type": "lecture",
+          "topics": "programming<br/>paradigms",
+          "notes": "lecture-07-programming-paradigms.html",
+          "details": [
+            "object-oriented programming",
+            "meta-programming: reflection",
+            "instrumentation"
+          ]
+        },
+        {
+          "date": "2019-10-15",
+          "type": "noclass",
+          "topics": "subtitute monday<br/>schedule"
+        },
+        {
+          "date": "2019-10-17",
+          "type": "lecture",
+          "topics": "programming<br/>paradigms",
+          "details": [
+            "aspect-oriented programming",
+            "paradigm tradeoffs"
           ]
         }
       ]
@@ -272,11 +287,20 @@
             <ul>
               <li>Tue. &amp; Thu., 9:30 - 10:45 AM in <a href="http://www.bu.edu/hic/directions/">MCS 180</a></li>
               <li><span>lecturers:</span> <ul>
-                <li> <b><a href="http://cs-people.bu.edu/lapets">Andrei Lapets</a></b>  (<a href="mailto:lapets@bu.edu">lapets@bu.edu</a>, MCS 173), until October 4 2019</li>
-                <li> <a href="http://cs-people.bu.edu/babman/">Kinan Dak Albab</a> (<a href="mailto:babman@bu.edu">babman@bu.edu</a>, MCS 173) as of October 4 2019</li>
-                <li> <a href="https://cs-people.bu.edu/ra1issa/">Rawane Issa</a> (<a href="mailto:ra1issa@bu.edu">ra1issa@bu.edu</a>, MCS 173) as of October 4 2019</li>
+                <li>
+                  <i><a href="https://web.archive.org/web/20190806223305/https://cs-people.bu.edu/lapets/">Andrei Lapets</a></i>  (<a href="mailto:lapets@bu.edu">lapets@bu.edu</a>, MCS 163), until October 4
+                </li>
+                <li>
+                  <a href="http://cs-people.bu.edu/babman/">Kinan Dak Albab</a> (<a href="mailto:babman@bu.edu">babman@bu.edu</a>, MCS 163) as of October 4
+                  <br>
+                  <span>Office Hours:</span> Tue. 11-1 PM at MCS 163 (Hariri)
+                </li>
+                <li>
+                  <a href="https://cs-people.bu.edu/ra1issa/">Rawane Issa</a> (<a href="mailto:ra1issa@bu.edu">ra1issa@bu.edu</a>, MCS 163) as of October 4
+                  <br>
+                  <span>Office Hours:</span> Thu. 11-1 PM at MCS 163 (Hariri)
+                </li>
               </ul>
-              <li><span>OH:</span> Thu. 11 - 1 PM <!--at <a href="http://www.bu.edu/cs/resources/laboratories/undergraduate-lab/">CS lab</a>--></li>
             </ul>
           </li>
           <li><span>questions and discussion:</span>
