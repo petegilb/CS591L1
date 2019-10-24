@@ -13154,7 +13154,7 @@ div#notebook {
 <li>If a protected variable is assigned a non-protected variable: the non-protected variable may or may not be null, depending on the program execution and input values, in general, it is undecidable to determine if such a variable will be null or not. We will be conservative and display errors for these assignments.</li>
 </ol>
 <p><strong>Remark:</strong> You must perform these checks on all assignments in the code, including ones inside function definitions.</p>
-<p>If you are using Python, you can test your implementation of this part by running it on these input files: <a href="https://github.com/KinanBab/CS591L1/project-2/problem1/test1.py">test1.py</a>, <a href="https://github.com/KinanBab/CS591L1/project-2/problem1/test2.py">test2.py</a>. If you are using a different language, you should write your own similar tests.</p>
+<p>If you are using Python, you can test your implementation of this part by running it on these input files: <a href="https://github.com/KinanBab/CS591L1/tree/master/project-2/problem1/test1.py">test1.py</a>, <a href="https://github.com/KinanBab/CS591L1/tree/master/project-2/problem1/test2.py">test2.py</a>. If you are using a different language, you should write your own similar tests.</p>
 <h3 id="Part-1-(b)---Functions-(30-points)">Part 1 (b) - Functions (30 points)<a class="anchor-link" href="#Part-1-(b)---Functions-(30-points)">&#182;</a></h3><p>The next step is to support protection when it comes to function calls. Function calls and definition cause implicit assignments that can break our protection of variables. Similar to the previous part, we will consider functions whose name start with _n_ to be protected: they should not return null. Function parameters with names that start with _n_ are also protected: that function cannot be called with a matching null argument.</p>
 <p>In particular, you need to detect and display errors for these cases:</p>
 <ol>
@@ -13168,7 +13168,7 @@ div#notebook {
 <p>The second pass can then look at that mapping to determine which parameters are protected, whenever it encounters a function call, it should also perform the functionality from part 1-a.</p>
 <p><strong>Hint 2</strong>: for the third case, it is not enough to only look for return statements inside the function definition. Depending on your language (e.g. in python or javascript), a function without a return statement automatically return null.</p>
 <p><strong>Hint 3</strong>: there is a lot of similarities between cases here and cases from part 1-a. Make sure you organize your code into functions, and then call these functions when needed, instead of writing the same code several times. For example, code to check that a statement is a function call, and the function name starts with _n_ can be reused for cases 1 and 3.</p>
-<p>If you are using Python, you can test your implementation of this part by running it on this input file: <a href="https://github.com/KinanBab/CS591L1/project-2/problem1/test3.py">test3.py</a>.</p>
+<p>If you are using Python, you can test your implementation of this part by running it on this input file: <a href="https://github.com/KinanBab/CS591L1/tree/master/project-2/problem1/test3.py">test3.py</a>.</p>
 
 </div>
 </div>
@@ -13181,7 +13181,7 @@ div#notebook {
 <p>You must modify your solution from part 1 to allow a special case: a protected variable (or function parameter) is allowed to be assigned the result of null_cast.</p>
 <p><strong>Note:</strong> Our checks now are more flexible and usable. Programmers can use null_cast to do more interesting things. However, null_cast may raise exceptions. At first glance this seems equivalent to plain programming without our solution, where null values can cause NullPointerExceptions. This is not the case, programmers will know to surround null_cast with a try catch statement when using it, additionally, it reduces the number of statements where exceptions may occur from essentially any statement involving a variable to only null_cast, which will be used infrequently by the programmers.</p>
 <p>Note that this null_cast function is a shallow embedding. It allows us to modify the semantics of the language combined with our null checker, while being coded in the statements of the language itself.</p>
-<p>You can find an example for testing at this file: <a href="https://github.com/KinanBab/CS591L1/project-2/problem1/test4.py">test4.py</a>.</p>
+<p>You can find an example for testing at this file: <a href="https://github.com/KinanBab/CS591L1/tree/master/project-2/problem1/test4.py">test4.py</a>.</p>
 
 </div>
 </div>
@@ -13194,7 +13194,7 @@ div#notebook {
 <p>You need to write your code in a separate file with a main function similar to part 1, that receives the input file path as a command line argument. Your main function will perform the instrumentation. Additionally, your file must contain a function called 'null_weave' that will perform the aspect-oriented solution.</p>
 <p><strong>Instrumentation:</strong> Your main function must parse the input code, and look for all function definitions. Your code must add checks to the start of each function, that check that each protected parameter is not null, and produce an error if it was. If a function has no protected parameter (i.e. all its parameters have names that do not start with _n_), the function code should not be modified.</p>
 <p><strong>Aspect-Oriented Programming:</strong> If you are using a language with aspect-oriented support (e.g. python and aspectlib), you must create an aspect that is applied to every function call (even unprotected ones). Your aspects proceeds to call the original function, and then check if the function name starts with _n_, and that the return value is null, and raises an error if that was the case. You should create a function 'null_weave' that attaches the aspect to function calls whenever it is called.</p>
-<p>You can find an example for testing at this file: <a href="https://github.com/KinanBab/CS591L1/project-2/problem1/test5.py">test5.py</a>.</p>
+<p>You can find an example for testing at this file: <a href="https://github.com/KinanBab/CS591L1/tree/master/project-2/problem1/test5.py">test5.py</a>.</p>
 <p><strong>If you are using a language that does not support aspect oriented programming nicely (e.g. Javascript), you should use instrumentation to solve both tasks.</strong></p>
 
 </div>
@@ -13215,7 +13215,7 @@ div#notebook {
 <h3 id="Part-1---Automatic-Memoization-(10-points)">Part 1 - Automatic Memoization (10 points)<a class="anchor-link" href="#Part-1---Automatic-Memoization-(10-points)">&#182;</a></h3><p><a href="https://en.wikipedia.org/wiki/Memoization">Memoization</a> is a standard technique for optimizing divide-and-conquer recursive algorithms. Certain recursive algorithms make several recursive calls, some of which may be on exactly the same parameter. You only need to compute the answer to one of these calls, store that in a cache/table/dict, and return that value directly for future calls. You can read more about <a href="https://www.geeksforgeeks.org/dynamic-programming/">dynamic programming</a>.</p>
 <p>In this part, you have to create a function called 'memoize' inside a file 'part1.py'. This function takes another function and its arguments as parameters. The memoize function will maintain some table that caches the output of all underlying functions. If the table does not have the output for the given function and parameters, memoize should run the function on the parameters and save that result.</p>
 <p>This table can be implemented via a global python dictionary, where the keys to that table consist of function names and arguments, and the values in the table will be the output of running that function on these arguments. <strong>For simplification you can assume that all function parameters are numbers.</strong></p>
-<p>Below is a more detailed description of the function. Look at this file for some tests <a href="https://github.com/KinanBab/CS591L1/project-2/problem2/test1.py">test1.py</a>.</p>
+<p>Below is a more detailed description of the function. Look at this file for some tests <a href="https://github.com/KinanBab/CS591L1/tree/master/project-2/problem2/test1.py">test1.py</a>.</p>
 
 </div>
 </div>
@@ -13256,7 +13256,7 @@ div#notebook {
 <p>We want to optimize all the calls after the first one. In particular, the pieces of the function code that operates only on the first parameter need to be executed only once, and their results can be saved and reused in the other calls. The difficulty is that our optimization code should somehow dynamically open the function up, and identify the expressions that can be optimized, and the ones that cannot be. We can do this via (somewhat) Lazy evaluation.</p>
 <p>A use case of this is solving systems of linear equations. These are usually represented as a matrix (containing coefficients of equations) and a vector containing values for every equation. You can see an example <a href="https://en.wikipedia.org/wiki/System_of_linear_equations#Matrix_equation">here</a>.</p>
 <p>Certain popular algorithms for solving such systems works by first perfoming an <a href="https://math.stackexchange.com/questions/1162992/how-to-use-lu-decomposition-to-solve-ax-b">LU factorization</a> step on the matrix (very expensive, O(n^3)), and then performig cheaper forward and backwards passes on the factorized matrices and the vector.</p>
-<p>I provide a simplified version of the example above. Instead of receiving as parameters both a matrix and a vector, it receives a matrix and a number. The function performs LU factorization, then does some summation operation on it and the give number. This prototype is available at <a href="https://github.com/KinanBab/CS591L1/project-2/problem1/test2.py">test2.py</a>. You can use it to test your implementation for this part.</p>
+<p>I provide a simplified version of the example above. Instead of receiving as parameters both a matrix and a vector, it receives a matrix and a number. The function performs LU factorization, then does some summation operation on it and the give number. This prototype is available at <a href="https://github.com/KinanBab/CS591L1/tree/master/project-2/problem2/test2.py">test2.py</a>. You can use it to test your implementation for this part.</p>
 <p>You will implement a function 'optimize' in a new file 'part3.py'. The optimize call receives the desired function to run and the two parameters, it performs the optimization described above, and returns the result.</p>
 
 </div>
