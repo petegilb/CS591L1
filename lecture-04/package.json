@@ -21,6 +21,6 @@
   },
   "homepage": "https://github.com/Ra1issa/carousel_lecture#readme",
   "dependencies": {
-    "neptune-notebook": "^1.0.2"
+    "neptune-notebook": "^1.1.0"
   }
 }

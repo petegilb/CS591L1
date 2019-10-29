@@ -19,43 +19,40 @@ h2 {
   color:#C48C17;
   font-weight: light;
 }
-
-textarea {
-  width:100%;
-  height: 20%;
-  box-sizing: border-box;         /* For IE and modern versions of Chrome */
-  -moz-box-sizing: border-box;    /* For Firefox                          */
-  -webkit-box-sizing: border-box; /* For Safari
-}
 ```
 
 ```neptune[inject=true,language=javascript]
+function getEditor(id) {
+  return document.getElementById(id).getElementsByClassName('code-mirror-div')[0].codeMirrorInstance;
+}
+
 window.addEventListener('load', function() {
-  var textarea = document.getElementById('carousels1-tab-2-tab').getElementsByTagName('textarea')[0];
-  textarea.value = JSON.stringify(costs["onlineRounds"], null, '  ');
-  textarea.handler();
+  var codeMirrorInstance = getEditor('carousels1-tab-2-tab');
+  var metrics = JSON.stringify(costs["onlineRounds"], null, '  ');
+  codeMirrorInstance.setValue(metrics);
+  codeMirrorInstance.refresh();
 });
 
 function getSampleCode() {
-  return document.getElementById('sample-tab-1-tab').getElementsByTagName('pre')[0].textContent;
+  return getEditor('sample-tab-1-tab').getValue();
 }
 
 function getTransformationCode() {
-  return document.getElementById('transform-tab-2-tab').getElementsByTagName('pre')[0].textContent;
+  return getEditor('transform-tab-2-tab').getValue();
 }
 
 function setTransformationCode(code) {
-  var textarea = document.getElementById('transform-tab-2-tab').getElementsByTagName('textarea')[0];
-  textarea.value = code;
-  textarea.handler();
+  var codeMirrorInstance = getEditor('transform-tab-2-tab');
+  codeMirrorInstance.setValue(code);
+  codeMirrorInstance.refresh();
 }
 
 function getCarouselsCode() {
-  return document.getElementById('carousels1-tab-1-tab').getElementsByTagName('textarea')[0].value;
+  return getEditor('carousels1-tab-1-tab').getValue();
 }
 
 function getCosts() {
-  return JSON.parse(document.getElementById('carousels1-tab-2-tab').getElementsByTagName('textarea')[0].value);
+  return JSON.parse(getEditor('carousels1-tab-2-tab').getValue());
 }
 ```
 
