@@ -13203,8 +13203,10 @@ expression := numericaLiteral | stringLiteral | 'None' | identifier | functionCa
 <p>This is intentional on our part when we were desiging the problem. Since we have no need for an environment or context. The implementation you had to for the tool can be simple. It does not need to keep track of some environment table and update it continously as the tool analyzes the program.</p>
 <p>Another benefit is that we can look at statements independently of one another. Since previous statements do not really affect with the current statement is valid or not.</p>
 <p>Our system has two types: nullable which means that the variable or function can be None, null-safe which means that the variable or function are protected, and valid which means that a given statement is valid and does not break null-safety. Any statement that cannot be typed is assumed to be invalid, and should be rejected by the solution.</p>
-<h4 id="Null-Safe-Expressions-Rules:">Null-Safe Expressions Rules:<a class="anchor-link" href="#Null-Safe-Expressions-Rules:">&#182;</a></h4><p>We start with the simplest rules in order: variables and functions with names starting with _n_ are null-safe, as well as numbers and strings. Note that a null-safe function should also return a null-safe value.</p>
-<p><br></p>
+<h4> Null-Safe Expressions Rules:</h4>
+We start with the simplest rules in order: variables and functions with names starting with \_n\_ are null-safe, as well as numbers and strings. Note that a null-safe function should also return a null-safe value.
+
+<p></p>
 <div style="float: left; text-align: center; margin-right: 20px;">
     <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
     x starts with _n_
@@ -13223,8 +13225,10 @@ expression := numericaLiteral | stringLiteral | 'None' | identifier | functionCa
     </span> <br/>
     &#8866; all integers and strings: null-safe
 </div>
-<div style="clear: both;"></div><h4 id="Nullable-Expressions-Rules:">Nullable Expressions Rules:<a class="anchor-link" href="#Nullable-Expressions-Rules:">&#182;</a></h4><p>Next, we define unsafe variables and functions. We do not restrict such functions, they can return anything (or not contain a return statement at all), hence the optional [return e] at the end.</p>
-<p><br></p>
+<div style="clear: both;"></div>
+
+<h4> Nullable Expressions Rules:</h4><p>Next, we define unsafe variables and functions. We do not restrict such functions, they can return anything (or not contain a return statement at all), hence the optional [return e] at the end.</p>
+<p><p></p></p>
 <div style="float: left; text-align: center; margin-right: 20px;">
     <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
     x does not start with _n_
@@ -13242,15 +13246,10 @@ expression := numericaLiteral | stringLiteral | 'None' | identifier | functionCa
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     </span> <br/>
     &#8866; None: nullable
-</div> <br>
-
-Note that the rules that describe function definitions above require that every statement in the function body is valid.
-
-#### Assignments Rules:
-
-Now, we can define valid assignments: these include null-safe assignments to protected variables, or any assignment to a nullable variables.
-
-<br>
+</div>
+<div style="clear: both;"></div><p>Note that the rules that describe function definitions above require that every statement in the function body is valid.</p>
+<h4> Assignments Rules:</h4><p>Now, we can define valid assignments: these include null-safe assignments to protected variables, or any assignment to a nullable variables.</p>
+<p><p></p></p>
 <div style="float: left; text-align: center; margin-right: 20px;">
     <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
     &#8866; x: null-safe, &nbsp; &nbsp; &#8866; e: null-safe
@@ -13261,30 +13260,28 @@ Now, we can define valid assignments: these include null-safe assignments to pro
     &#8866; x: nullable
     </span> <br/>
     &#8866; 'x = e': valid
-</div> <br> <br>
-
-#### Function Call Rule:
+</div>
+<div style="clear: both;"></div><h4> Function Call Rule:</h4>
 So far, our rules cover almost all of our syntax: they include assignments, function definitions, and primitive expressions. However, they do not include function calls yet. We provide the final rule for that below: it requires that any protected parameter in the function definition is passed a null-safe expression in the function call. The rule gives the function call the same type as the function definition (either nullable or null-safe).
 
-<br>
+<p></p>
 <div style="float: left; text-align: center; margin-right: 20px;">
     <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
     &#8866; 'f(param_1, ..., param_n): ...': T, &nbsp; &nbsp; &forall; i(&#8866; param_i: null-safe &rarr; &#8866; e_i: null-safe)
     </span> <br/>
     &#8866; 'f(e_1, ..., e_n)': T
-</div> <br> <br>
+</div>
+<div style="clear: both;"></div>
 
-#### Program Rule:
-
-Finally, we say that a program is valid in our type system, if every statement in it is valid.
-
-<br>
+<h4> Program Rule:</h4><p>Finally, we say that a program is valid in our type system, if every statement in it is valid. Note that some statements (like a function call) will have type null-safe or nullable even when valid. So our rule must allow that as well. Another way to phrase this rule is to say that the whole program is typable (i.e. valid) if every statement in it is typable (i.e. has a type).</p>
+<p><p></p></p>
 <div style="float: left; text-align: center; margin-right: 20px;">
     <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &nbsp; &nbsp; &nbsp; &forall; i(&#8866; s_i: valid) &nbsp; &nbsp; &nbsp;
+    &nbsp; &nbsp; &nbsp; &forall; i(&#8866; s_i: T_i) &nbsp; &nbsp; &nbsp; where T_1, ..., T_n &isin; {valid, null-safe, nullable}
     </span> <br/>
-    &#8866; 's_1 ... s_i': valid
+    &#8866; 's_1 ... s_n': valid
 </div>
+<div style="clear: both;"></div>
 </div>
 </div>
 </div>
