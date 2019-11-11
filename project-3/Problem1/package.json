@@ -1,0 +1,20 @@
+{
+  "name": "cs591l1-problem1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "party.js",
+  "dependencies": {
+    "express": "^4.17.1",
+    "libsodium-wrappers": "^0.7.2",
+    "jquery-deferred": "^0.3.1",
+    "socket.io": "^2.0.2",
+    "socket.io-client": "^2.1.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
