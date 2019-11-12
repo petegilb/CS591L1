@@ -3,4 +3,4 @@
 	url = https://github.com/multiparty/carousels.git
 [submodule "project-3/Problem1/jiff"]
 	path = project-3/Problem1/jiff
-	url = git@github.com:multiparty/jiff.git
+	url = https://github.com/multiparty/jiff.git
