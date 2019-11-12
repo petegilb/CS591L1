@@ -1,25 +1,20 @@
-
-     ,-----.,--.                  ,--. ,---.   ,--.,------.  ,------.
-    '  .--./|  | ,---. ,--.,--. ,-|  || o   \  |  ||  .-.  \ |  .---'
-    |  |    |  || .-. ||  ||  |' .-. |`..'  |  |  ||  |  \  :|  `--, 
-    '  '--'\|  |' '-' ''  ''  '\ `-' | .'  /   |  ||  '--'  /|  `---.
-     `-----'`--' `---'  `----'  `---'  `--'    `--'`-------' `------'
-    ----------------------------------------------------------------- 
-
-
-Welcome to your Node.js project on Cloud9 IDE!
-
-This chat example showcases how to use `socket.io` with a static `express` server.
+Sample node.js webserver interfacing with an SQLite database.
 
 ## Running the server
 
-1) Open `server.js` and start the app by clicking on the "Run" button in the top menu.
+Make sure you install all the needed dependencies:
+```bash
+npm install
+```
 
-2) Alternatively you can launch the app from the Terminal:
+Run the server from the terminal using:
+```bash
+node server
+```
 
-    $ node server.js
+Once the server is running, open this url in your browser 'http://localhost:3000/' to run the client webpage.
 
-Once the server is running, open the project in the shape of 'https://projectname-username.c9users.io/'. As you enter your name, watch the Users list (on the left) update. Once you press Enter or Send, the message is shared with all connected clients.
+Warning: this is tested on node versions up to node 8. It is known not to work on node 12 due to a problem with the node-sqlite3 dependency.
 
 ## Organization of the code
 * server.js : this file contains the code for the server (the intermediate layer between the client and database).
