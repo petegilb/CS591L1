@@ -13077,9 +13077,33 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="SQLAlchemy">SQLAlchemy<a class="anchor-link" href="#SQLAlchemy">&#182;</a></h1><h2 id="Installation">Installation<a class="anchor-link" href="#Installation">&#182;</a></h2><div class="highlight"><pre><span></span>pip install sqlalchemy
-<span class="c1"># make sure you have a database system installed, e.g. sqlite3 using apt-get or brew etc</span>
+<h1 id="SQLAlchemy-and-Object-Relational-Model-(ORMs)">SQLAlchemy and Object Relational Model (ORMs)<a class="anchor-link" href="#SQLAlchemy-and-Object-Relational-Model-(ORMs)">&#182;</a></h1><h2 id="Motivation">Motivation<a class="anchor-link" href="#Motivation">&#182;</a></h2><p>SQL-based relational databases are a great way to store and query relational data. SQL database systems (e.g. Postgres) are optimized for fast query of data and efficient storage, via a variety of techniques such as indexing or compression.</p>
+<p>SQL provides us with a descriptive language that allows us to create and modify schemas (e.g. the structure of tables and their relations), as well as inserting, updating, and querying data. SQL is a domain specific language. It does not have any programming capabilities beyond database functionalities.</p>
+<p>Database systems are commonly used as a backend data store for applications, especially web and mobile applications. Large applications of this sort are written in a variety of layers and languages. Common backends languages including Python and node.js.</p>
+<p>This poses a challenge. Backends written in Python or similar languages must be able to interact with database systems through SQL. Legacy designs suggest embedding SQL commands into the backend in a naive way: the SQL commands are written as string literals in the backend program, and then passed to some intermediate interface or driver responsible for passing them to the database system, and retrieving the result.</p>
+<p>This technique was very popular in the early days of backend and web development. However, it had several drawbacks. First, since the SQL statements in the backend are string literals, manipulating them was restricted to string operations, such as concatenation or template instatiations, which is somewhat low level. Second, writing SQL statements as string literals meant little IDE and toolchain support for them, it also is very error prone. Third, such a design posed several vulnerabilities, SQL commands were represented as string literals and assigned to variables, which by definition were used throughout the backend, and sometimes modified. Every access or modification to a variable like that posed an attack surface (or a potential bug) for hackers to abuse. A prime example of such vulnerability is <a href="https://www.owasp.org/index.php/SQL_Injection">SQL-injection</a>.</p>
+<p>As backend development became increasingly important, its toolchains and frameworks received increased attention from the community. This led to the invention of ORMs. SQLalchemy is one of the most popular and mature ORMs available for python. ORMs embed SQL into their host language in a more sophisticated way. Developers can issue SQL commands without having to write SQL statements explicitly as strings. Instead, developers use typical constructs of the host language to represent the query logically, which is automatically translated into <strong>safe</strong> SQL statements via the ORM.</p>
+<p>ORMs are generally a deep embedding. Constructs provided by the ORM (e.g. the capability to query data from a database) are represented as data types (e.g. classes and objects) in the host language, that are defined and provided by the ORM, which can be manipulated by the developers via the ORM's API, to issue SQL statements.</p>
+<p>While SQL is based on the concepts of tables and relationship (e.g. foreign keys) between them, ORMs are based on classes and objects. An ORM allows developers to represent a table as a class in the host language. Rows in that table are then represented as objects that are instances of the corresponding class. A relationship between tables is represented via references between the associated objects.</p>
+<p>For example, instead of using a statement like this:</p>
+<div class="highlight"><pre><span></span><span class="k">SELECT</span> <span class="n">user_id</span> <span class="k">FROM</span> <span class="n">users</span> <span class="k">WHERE</span> <span class="n">username</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span> <span class="k">AND</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">;</span>
 </pre></div>
+<p>An ORM supports achieving the same effect via class and objects in the host language:</p>
+<div class="highlight"><pre><span></span><span class="c1"># User is a class representing the users table</span>
+<span class="n">User</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">user_id</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">AND</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">username</span><span class="o">==</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="n">User</span><span class="o">.</span><span class="n">password</span><span class="o">==</span><span class="s1">&#39;bar&#39;</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="SQLAlchemy">SQLAlchemy<a class="anchor-link" href="#SQLAlchemy">&#182;</a></h1><p>In this course, we will focus specifically on SQLAlchemy as a sample ORM. SQLAlchemy is a terrific use case for studying embedded frameworks, since it uses a lot of the techniques we covered in class previously, so that it can achieve a friendly deep embedding into Python, that interfaces with SQL and databases. These notes follow closely this <a href="https://docs.sqlalchemy.org/en/13/orm/tutorial.html">great SQLAlchemy tutorial</a>.</p>
+<p>The tutorial has more details about SQLAlchemy's capabilites and API, while the notes focus on providing a high level summary of the capabilities, and certain aspects that are interesting from an embedding point of view.</p>
+<h2 id="Connecting-to-a-Database">Connecting to a Database<a class="anchor-link" href="#Connecting-to-a-Database">&#182;</a></h2><p>The first step of using SQLAlchemy is to connect it to the desired database system. This is achieved via creating an <strong>engine</strong>, which is the SQLAlchemy intermediate layer that sits between the developers python code, and the database system.</p>
+<p>The engine is responsible for communicating with the database system, including sending and receiving network messages if the database is remote. The engine is also responsible for generating SQL queries that correspond to the developers code, using the syntax and features of the specific database system it is connected to. It is also responsible for parsing the results of queries into their corresponding python objects and values.</p>
+<p>To create an engine, all you really need to do is provide SQLAlchemy with the address of the database to connect to. Below, we will connect to an in-memory sqlite database. This assumes that your computer has sqlite3 installed.</p>
 
 </div>
 </div>
@@ -13092,8 +13116,10 @@ div#notebook {
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">sqlalchemy</span>
 <span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="k">import</span> <span class="n">create_engine</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">sqlalchemy</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
-<span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s1">&#39;sqlite:///:memory:&#39;</span><span class="p">,</span> <span class="n">echo</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># will print all issued sql statements to the screen</span>
+<span class="c1"># echo=True indicates that engine should print debugging information</span>
+<span class="c1"># including all sql statements it issues</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s1">&#39;sqlite:///:memory:&#39;</span><span class="p">,</span> <span class="n">echo</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">sqlalchemy</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -13110,7 +13136,7 @@ div#notebook {
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>1.3.11
+<pre>Engine(sqlite:///:memory:) 1.3.11
 </pre>
 </div>
 </div>
@@ -13122,14 +13148,19 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Schema">Schema<a class="anchor-link" href="#Schema">&#182;</a></h1>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Declarative-Base">Declarative Base<a class="anchor-link" href="#Declarative-Base">&#182;</a></h3>
+<h1 id="Schema-Declaration-via-SQLAlchemy">Schema Declaration via SQLAlchemy<a class="anchor-link" href="#Schema-Declaration-via-SQLAlchemy">&#182;</a></h1><p>The schema of a database specifies the structure of its tables. This includes the name of all tables, and each column inside them. This includes the name and type of each column (e.g. a number or a date or text), as well as any other properties or conditions of that column (e.g. marking a column as having only unique values).</p>
+<p>Traditionally, a table can be defined in SQL via an insert statement. For example, this statement defines a table of authors, each with an ID a first name and a last name:</p>
+<div class="highlight"><pre><span></span><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">authors</span><span class="p">(</span>
+    <span class="n">id</span> <span class="nb">INTEGER</span> <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="n">AUTOINCREMENT</span><span class="p">,</span>
+    <span class="n">first_name</span> <span class="nb">TEXT</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">last_name</span> <span class="nb">TEXT</span> <span class="k">NOT</span> <span class="k">NULL</span>
+<span class="p">);</span>
+</pre></div>
+<p>Note that while the sytnax of SQL is standardized between all database systems (for most statements). Certain types and 
+features are different or unique to specific database systems. For example, not all systems support AUTOINCREMENT.</p>
+<h2 id="Declarative-Base">Declarative Base<a class="anchor-link" href="#Declarative-Base">&#182;</a></h2><p>We can define tables and schemas through SQLAlchemy via python constructs. Namely, we defined a table by defining a python class. Not every python class we define in an application will be a table. We can mark certain class as tables by inheriting from a special <strong>declarative base</strong> class that SQLAlchemy provides us.</p>
+<p>First, we should create a declarative base via sqlalchemy's API. An application can have several declarative bases to support having several databases. We will go over how a declarative base is implemented in more detail in the next lecture.</p>
+
 </div>
 </div>
 </div>
@@ -13150,7 +13181,10 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Defining-tables">Defining tables<a class="anchor-link" href="#Defining-tables">&#182;</a></h3>
+<h2 id="Defining-Tables-via-Python-Classes">Defining Tables via Python Classes<a class="anchor-link" href="#Defining-Tables-via-Python-Classes">&#182;</a></h2><p>Now, we can define all the tables we want as Python classes. We only have to <strong>inherit from the declarative base</strong>. These python classes are called <strong>SQLAlchemy modules</strong>.</p>
+<p>Each module contains <em>static</em> attributes specifying the columns, their constraints, and other information about the table it represents. Additionally, since modules are just Python classes, they can also have Python-side attributes and functions. SQLAlchemy can automatically distinguish which are python-side and which are database side, by looking at the attributes and functions types.</p>
+<p>Below, we will use SQLAlchemy declarative API to define several tables representing a library database.</p>
+
 </div>
 </div>
 </div>
@@ -13169,10 +13203,10 @@ div#notebook {
     <span class="n">first_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">last_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">get_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1"># python side</span>
         <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">first_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_name</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1"># python side</span>
         <span class="k">return</span> <span class="s2">&quot;&lt;Author(id=</span><span class="si">{}</span><span class="s2">, name=&#39;</span><span class="si">{}</span><span class="s2">&#39;&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">())</span>
 </pre></div>
 
@@ -13180,6 +13214,22 @@ div#notebook {
 </div>
 </div>
 
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Below, we define another table representing books in our library. An interesting attribute of books is that they have an author. In database terms, we have a one-to-many relationship between books and authors. An author can have many book, while a book can have one author (at least in our example).</p>
+<p>We can define this relationship using SQLAlchemy's API in a standard way. First, we define a column that serves as a <strong>foreign key</strong> between the two tables. Second, we define a <strong>logical relationship</strong> between these two tables.</p>
+<p>The logical relationship is a logical connection that SQLAlchemy automatically manages at the Python side. In particular, it provides a simple way to interact with rows in the two tables that are related via the foreign key. More on this later.</p>
+<p>Notice that the definition of the relationship specifies three things:</p>
+<ol>
+<li>The sqlalchemy module's name: This is specified as a string because the module may not have been defined yet at this point, and to support tables defined outside via the alternative classical mapping feature of SQLAlchemy, which defines tables without defining python classes.</li>
+<li>The foreign keys: SQLAlchemy can deduce this automatically when only one foreign key exists between the two tables.</li>
+<li>The backref name: this directs SQLAlchemy to define a back-reference relationship in the Author module, this is a useful shortcut to avoid having to define both ends of the relationship in both modules explicitly.</li>
+</ol>
+
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
@@ -13196,7 +13246,7 @@ div#notebook {
     <span class="n">synopsis</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">author_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="n">Author</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">author</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Author&quot;</span><span class="p">,</span> <span class="n">backref</span><span class="o">=</span><span class="s2">&quot;books&quot;</span><span class="p">)</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Author&quot;</span><span class="p">,</span> <span class="n">foreign_keys</span><span class="o">=</span><span class="p">[</span><span class="n">author_id</span><span class="p">],</span> <span class="n">backref</span><span class="o">=</span><span class="s2">&quot;books&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;&lt;Book(id=</span><span class="si">{}</span><span class="s2">, title=&#39;</span><span class="si">{}</span><span class="s2">&#39;, author=&#39;</span><span class="si">{}</span><span class="s2">&#39;, has_synopsis=</span><span class="si">{}</span><span class="s2">)&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
@@ -13207,6 +13257,17 @@ div#notebook {
 </div>
 </div>
 
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Finally, we define a module for countries. We also specify a relationship between countries and authors. However, this is a many to many relationship. An author may have several nationalities, and a country can have many authors.</p>
+<p>Traditionally, many-to-many relationships are defined via an association table, that lists related entries in both tables. We define this association table via the CountryAuthor module below.</p>
+<p>We define the relationship inside the Country module. Note that we pass the name of the association module via the secondary parameter. This tells sqlalchemy that this is a many-to-many relation.</p>
+<p>Notice that in the association module we only define foreign keys but no relations. This is only a matter of convinience. In our code, we only need to use the relationship via objects of countries and authors and never the association table.</p>
+
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
@@ -13227,7 +13288,8 @@ div#notebook {
                            <span class="n">backref</span><span class="o">=</span><span class="s2">&quot;countries&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;&lt;Country(id=</span><span class="si">{}</span><span class="s2">, name=</span><span class="si">{}</span><span class="s2">, code=</span><span class="si">{}</span><span class="s2">)&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;Country(id=</span><span class="si">{}</span><span class="s2">, name=</span><span class="si">{}</span><span class="s2">, code=</span><span class="si">{}</span><span class="s2">)&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                                           <span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
 
 <span class="k">class</span> <span class="nc">CountryAuthor</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s1">&#39;country_author&#39;</span>
@@ -13238,10 +13300,10 @@ div#notebook {
     
     <span class="c1">#author = relationship(&quot;Author&quot;)</span>
     <span class="c1">#country = relationship(&quot;Country&quot;)</span>
-    
-    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">UniqueConstraint</span><span class="p">(</span><span class="s2">&quot;author_id&quot;</span><span class="p">,</span> <span class="s2">&quot;native&quot;</span><span class="p">),</span>
-    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;CountryAuthor(author_id=</span><span class="si">{}</span><span class="s2">, country_id=</span><span class="si">{}</span><span class="s2">, native=</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">author_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">country_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">native</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -13252,7 +13314,9 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Creating-the-Tables">Creating the Tables<a class="anchor-link" href="#Creating-the-Tables">&#182;</a></h3>
+<h2 id="Creating-the-Tables">Creating the Tables<a class="anchor-link" href="#Creating-the-Tables">&#182;</a></h2><p>Note that we have only defined python classes so far. The database itself has not been modified yet, and no "physical" tables were created. We can tell SQLAlchemy to create the tables for us via the declarative base. When creating the tables, we must specify a corresponding engine, which will be used to generate and issue the corresponding SQL commands.</p>
+<p>Note how this call generates many SQL statements, corresponding to each of the modules we defined above.</p>
+
 </div>
 </div>
 </div>
@@ -13278,38 +13342,27 @@ div#notebook {
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>2019-11-13 11:33:39,549 INFO sqlalchemy.engine.base.Engine SELECT CAST(&#39;test plain returns&#39; AS VARCHAR(60)) AS anon_1
-2019-11-13 11:33:39,552 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,558 INFO sqlalchemy.engine.base.Engine SELECT CAST(&#39;test unicode returns&#39; AS VARCHAR(60)) AS anon_1
-2019-11-13 11:33:39,559 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,564 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;books&#34;)
-2019-11-13 11:33:39,566 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,572 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;books&#34;)
-2019-11-13 11:33:39,575 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,580 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;authors&#34;)
-2019-11-13 11:33:39,583 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,586 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;authors&#34;)
-2019-11-13 11:33:39,587 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,589 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;country_author&#34;)
-2019-11-13 11:33:39,590 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,591 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;country_author&#34;)
-2019-11-13 11:33:39,592 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,594 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;country&#34;)
-2019-11-13 11:33:39,594 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,595 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;country&#34;)
-2019-11-13 11:33:39,596 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,599 INFO sqlalchemy.engine.base.Engine 
-CREATE TABLE authors (
-	id INTEGER NOT NULL, 
-	first_name VARCHAR NOT NULL, 
-	last_name VARCHAR NOT NULL, 
-	PRIMARY KEY (id)
-)
-
-
-2019-11-13 11:33:39,602 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,605 INFO sqlalchemy.engine.base.Engine COMMIT
-2019-11-13 11:33:39,607 INFO sqlalchemy.engine.base.Engine 
+<pre>2019-11-14 00:20:03,948 INFO sqlalchemy.engine.base.Engine SELECT CAST(&#39;test plain returns&#39; AS VARCHAR(60)) AS anon_1
+2019-11-14 00:20:03,950 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,953 INFO sqlalchemy.engine.base.Engine SELECT CAST(&#39;test unicode returns&#39; AS VARCHAR(60)) AS anon_1
+2019-11-14 00:20:03,957 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,960 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;country&#34;)
+2019-11-14 00:20:03,964 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,967 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;country&#34;)
+2019-11-14 00:20:03,970 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,972 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;books&#34;)
+2019-11-14 00:20:03,975 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,976 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;books&#34;)
+2019-11-14 00:20:03,979 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,980 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;authors&#34;)
+2019-11-14 00:20:03,982 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,983 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;authors&#34;)
+2019-11-14 00:20:03,985 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,986 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;country_author&#34;)
+2019-11-14 00:20:03,988 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,989 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;country_author&#34;)
+2019-11-14 00:20:03,990 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,992 INFO sqlalchemy.engine.base.Engine 
 CREATE TABLE country (
 	id INTEGER NOT NULL, 
 	name VARCHAR NOT NULL, 
@@ -13320,9 +13373,20 @@ CREATE TABLE country (
 )
 
 
-2019-11-13 11:33:39,609 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,611 INFO sqlalchemy.engine.base.Engine COMMIT
-2019-11-13 11:33:39,613 INFO sqlalchemy.engine.base.Engine 
+2019-11-14 00:20:03,993 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,994 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-14 00:20:03,995 INFO sqlalchemy.engine.base.Engine 
+CREATE TABLE authors (
+	id INTEGER NOT NULL, 
+	first_name VARCHAR NOT NULL, 
+	last_name VARCHAR NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+
+2019-11-14 00:20:03,996 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,998 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-14 00:20:03,999 INFO sqlalchemy.engine.base.Engine 
 CREATE TABLE books (
 	id INTEGER NOT NULL, 
 	title VARCHAR(75) NOT NULL, 
@@ -13333,23 +13397,22 @@ CREATE TABLE books (
 )
 
 
-2019-11-13 11:33:39,614 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,616 INFO sqlalchemy.engine.base.Engine COMMIT
-2019-11-13 11:33:39,618 INFO sqlalchemy.engine.base.Engine 
+2019-11-14 00:20:03,999 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:04,000 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-14 00:20:04,001 INFO sqlalchemy.engine.base.Engine 
 CREATE TABLE country_author (
 	author_id INTEGER NOT NULL, 
 	country_id INTEGER NOT NULL, 
 	native BOOLEAN NOT NULL, 
 	PRIMARY KEY (author_id, country_id), 
-	UNIQUE (author_id, native), 
 	FOREIGN KEY(author_id) REFERENCES authors (id), 
 	FOREIGN KEY(country_id) REFERENCES country (id), 
 	CHECK (native IN (0, 1))
 )
 
 
-2019-11-13 11:33:39,619 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:39,621 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-14 00:20:04,002 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:04,003 INFO sqlalchemy.engine.base.Engine COMMIT
 </pre>
 </div>
 </div>
@@ -13361,7 +13424,22 @@ CREATE TABLE country_author (
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Data-Manipulation">Data Manipulation<a class="anchor-link" href="#Data-Manipulation">&#182;</a></h1><h2 id="Session">Session<a class="anchor-link" href="#Session">&#182;</a></h2>
+<h1 id="Data-Manipulation">Data Manipulation<a class="anchor-link" href="#Data-Manipulation">&#182;</a></h1><p>Now that we have our tables defined. It is time to add some data to them.</p>
+<p>SQLAlchemy supports data manipulation via regular python manipulation of objects. This includes inserting, updating, and deleting of data.</p>
+<h2 id="Session-and-Transactions">Session and Transactions<a class="anchor-link" href="#Session-and-Transactions">&#182;</a></h2><p>SQLAlchemy supports transactions in the ACID model. A transaction consists of several commands, which may include data manipulation, queries, and even schema manipulation. A transaction is initiated before all of its commands, and is then populated with commands one at a time. A transaction can be committed, at which point its commands are committed to the database. Transactions can also be rolled back (e.g. in the case of errors), at which point their effects are undone.</p>
+<p>ACID stands for:</p>
+<ol>
+<li>Atomicity: Each transaction is atomic. Either all of its commands are committed, or all of them fail.</li>
+<li>Consistency: If a transaction is committed, then all of it commands are consistent with the database constraints (e.g. it never sets the value of a column to null if the column is not allowed to be null).</li>
+<li>Isolation: changes made by a transaction do not affect other concurrent transaction, unless that transaction was committed, or the changes were asked to be flushed explicitly.</li>
+<li>Durable: committed transaction are indeed committed in the database physically, and they will survive future errors or crashes.</li>
+</ol>
+<p>A transaction in SQLAlchemy is implemented as part of the session abstraction. A session is an SQLAlchemy object that can be populated with commands and manipulation. The sessions provides a <strong>commit</strong> and <strong>rollback</strong> functions that can be used to manipulate the underlying transaction.</p>
+<p>Additionally, the session provides a <strong>flush</strong> function, which can be used to flush the changes made so far to the database, so that their effects are visible to other transactions and queries. Even if some commands are flushed successfully, future commands in the same transaction may cause errors, which will cause the entire transaction to rollback, including the flushed commands. This is not the case for <strong>committed</strong> commands, which will never get rolled back.</p>
+<p>Sessions are created via a session maker. A session maker can be configured initially by providing an engine, and then used to create new sessions. This is shown below. Note that this is a simple <a href="https://en.wikipedia.org/wiki/Factory_method_pattern">factory pattern</a>.</p>
+<p>Note that SQLAlchemy supports several optional parameters that can be provided at the SessionMaker or the session level. Most noteably autoflush and autocommit, which default to True and False respectively, which specify whether any given command is immediately flushed or committed. A session with autocommit=False can be committed explicitly by calling .commit().</p>
+<p>The transaction/session API of SQLAlchemy is very extensive, and include a variety of configurable parameters, as well as support for manual management of transactions, subtransactions, and other customizable behavior. For more details, look at the <a href="https://docs.sqlalchemy.org/en/13/orm/session_api.html">sqlalchemy session docs</a>.</p>
+
 </div>
 </div>
 </div>
@@ -13383,7 +13461,14 @@ CREATE TABLE country_author (
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Inserting-Elements">Inserting Elements<a class="anchor-link" href="#Inserting-Elements">&#182;</a></h2>
+<h2 id="Inserting-Elements">Inserting Elements<a class="anchor-link" href="#Inserting-Elements">&#182;</a></h2><p>Now that we have the ability to create sessions. We can start inserting rows into our database. This is done via three steps, the last of which may be implicit:</p>
+<ol>
+<li>A new instance object of the module representing the desired table is created. The object can be provided all the content data via its constructors (which is inherited from the declartive base), or by manipulating its attributes explicitly.</li>
+<li>The new instances are added to a session/transaction. This does not commit them to the database directly (unless autocommit=True). However, it may flush them to the database if autoflush=True.</li>
+<li>The session is committed via .commit() or implicitly when autocommit=true.</li>
+</ol>
+<p>Below, we create a new author and country object. We also indicate that they are related by manipulating their logical relation.</p>
+
 </div>
 </div>
 </div>
@@ -13392,18 +13477,28 @@ CREATE TABLE country_author (
 <div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Create session</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">(</span><span class="n">autoflush</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
+<span class="c1"># Create new objects</span>
 <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="p">(</span><span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;J. K.&#39;</span><span class="p">,</span> <span class="n">last_name</span><span class="o">=</span><span class="s1">&#39;Rowling&#39;</span><span class="p">)</span>
-<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">author</span><span class="p">)</span>
+<span class="n">country</span> <span class="o">=</span> <span class="n">Country</span><span class="p">()</span>
+<span class="n">country</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;United Kingdom&#39;</span>
+<span class="n">country</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="s1">&#39;UK&#39;</span>
 
-<span class="n">country</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;United Kingdom&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;UK&#39;</span><span class="p">)</span>
+<span class="c1"># Add objects to session</span>
+<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">author</span><span class="p">)</span>
 <span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">country</span><span class="p">)</span>
 
-<span class="n">author</span><span class="o">.</span><span class="n">countries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">country</span><span class="p">)</span>
-<span class="c1">#country.authors.append(author)</span>
+<span class="c1"># Notice that the objects are not inserted to the database</span>
+<span class="c1"># but they are marked as new by the session</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">new</span><span class="p">)</span>
 
-<span class="n">session</span><span class="o">.</span><span class="n">new</span>
+<span class="c1"># Country.authors is a many-to-many relation we defined above</span>
+<span class="c1"># also Author.countries is its backref relation</span>
+<span class="c1"># because it is many-to-many, both directions of the relation are lists.</span>
+<span class="n">author</span><span class="o">.</span><span class="n">countries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">country</span><span class="p">)</span>
+<span class="c1">#country.authors.append(author) # this is also fine</span>
 </pre></div>
 
     </div>
@@ -13416,15 +13511,13 @@ CREATE TABLE country_author (
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[8]:</div>
+    <div class="prompt"></div>
 
 
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>IdentitySet([&lt;Country(id=None, name=United Kingdom, code=UK)&gt;, &lt;Author(id=None, name=&#39;J. K. Rowling&#39;&gt;])</pre>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>IdentitySet([&lt;Author(id=None, name=&#39;J. K. Rowling&#39;&gt;, &lt;Country(id=None, name=United Kingdom, code=UK)&gt;])
+</pre>
 </div>
-
 </div>
 
 </div>
@@ -13436,7 +13529,8 @@ CREATE TABLE country_author (
 <div class="prompt input_prompt">In&nbsp;[9]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># We can commit the session</span>
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </pre></div>
 
     </div>
@@ -13453,14 +13547,14 @@ CREATE TABLE country_author (
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>2019-11-13 11:33:40,140 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
-2019-11-13 11:33:40,142 INFO sqlalchemy.engine.base.Engine INSERT INTO country (name, code) VALUES (?, ?)
-2019-11-13 11:33:40,143 INFO sqlalchemy.engine.base.Engine (&#39;United Kingdom&#39;, &#39;UK&#39;)
-2019-11-13 11:33:40,145 INFO sqlalchemy.engine.base.Engine INSERT INTO authors (first_name, last_name) VALUES (?, ?)
-2019-11-13 11:33:40,146 INFO sqlalchemy.engine.base.Engine (&#39;J. K.&#39;, &#39;Rowling&#39;)
-2019-11-13 11:33:40,148 INFO sqlalchemy.engine.base.Engine INSERT INTO country_author (author_id, country_id, native) VALUES (?, ?, ?)
-2019-11-13 11:33:40,148 INFO sqlalchemy.engine.base.Engine (1, 1, 1)
-2019-11-13 11:33:40,150 INFO sqlalchemy.engine.base.Engine COMMIT
+<pre>2019-11-14 00:20:04,190 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,194 INFO sqlalchemy.engine.base.Engine INSERT INTO authors (first_name, last_name) VALUES (?, ?)
+2019-11-14 00:20:04,197 INFO sqlalchemy.engine.base.Engine (&#39;J. K.&#39;, &#39;Rowling&#39;)
+2019-11-14 00:20:04,203 INFO sqlalchemy.engine.base.Engine INSERT INTO country (name, code) VALUES (?, ?)
+2019-11-14 00:20:04,206 INFO sqlalchemy.engine.base.Engine (&#39;United Kingdom&#39;, &#39;UK&#39;)
+2019-11-14 00:20:04,210 INFO sqlalchemy.engine.base.Engine INSERT INTO country_author (author_id, country_id, native) VALUES (?, ?, ?)
+2019-11-14 00:20:04,212 INFO sqlalchemy.engine.base.Engine (1, 1, 1)
+2019-11-14 00:20:04,218 INFO sqlalchemy.engine.base.Engine COMMIT
 </pre>
 </div>
 </div>
@@ -13472,7 +13566,9 @@ CREATE TABLE country_author (
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Session--&gt;-Transactions">Session -&gt; Transactions<a class="anchor-link" href="#Session--&gt;-Transactions">&#182;</a></h2>
+<h2 id="Rollbacks">Rollbacks<a class="anchor-link" href="#Rollbacks">&#182;</a></h2><p>The previous transaction was successfully committed. It does not violate any constraints set by our database.</p>
+<p>The following transaction will fail. In particular, because we are inserting a new country with the same code as the UK, which violates the uniqueness constraint defined in the Country module above.</p>
+
 </div>
 </div>
 </div>
@@ -13481,19 +13577,18 @@ CREATE TABLE country_author (
 <div class="prompt input_prompt">In&nbsp;[10]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">traceback</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
 
-<span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
-
-<span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="p">(</span><span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;fail&#39;</span><span class="p">,</span> <span class="n">last_name</span><span class="o">=</span><span class="s1">&#39;failed&#39;</span><span class="p">)</span>
-<span class="n">country</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;failure&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;UK&#39;</span><span class="p">)</span>
+<span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="p">(</span><span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Other&#39;</span><span class="p">,</span> <span class="n">last_name</span><span class="o">=</span><span class="s1">&#39;Author&#39;</span><span class="p">)</span>
+<span class="n">country</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Other Country&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;UK&#39;</span><span class="p">)</span>
 
 <span class="n">session</span><span class="o">.</span><span class="n">add_all</span><span class="p">([</span><span class="n">author</span><span class="p">,</span> <span class="n">country</span><span class="p">])</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-<span class="k">except</span><span class="p">:</span>
-    <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
-<span class="c1"># session.rollback()</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+    <span class="c1"># session.rollback() # the transaction is automatically rolledback</span>
 </pre></div>
 
     </div>
@@ -13510,79 +13605,16 @@ CREATE TABLE country_author (
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>2019-11-13 11:33:40,222 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
-2019-11-13 11:33:40,223 INFO sqlalchemy.engine.base.Engine INSERT INTO authors (first_name, last_name) VALUES (?, ?)
-2019-11-13 11:33:40,223 INFO sqlalchemy.engine.base.Engine (&#39;fail&#39;, &#39;failed&#39;)
-2019-11-13 11:33:40,225 INFO sqlalchemy.engine.base.Engine INSERT INTO country (name, code) VALUES (?, ?)
-2019-11-13 11:33:40,225 INFO sqlalchemy.engine.base.Engine (&#39;failure&#39;, &#39;UK&#39;)
-2019-11-13 11:33:40,226 INFO sqlalchemy.engine.base.Engine ROLLBACK
-</pre>
-</div>
-</div>
+<pre>2019-11-14 00:20:04,336 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,338 INFO sqlalchemy.engine.base.Engine INSERT INTO authors (first_name, last_name) VALUES (?, ?)
+2019-11-14 00:20:04,339 INFO sqlalchemy.engine.base.Engine (&#39;Other&#39;, &#39;Author&#39;)
+2019-11-14 00:20:04,343 INFO sqlalchemy.engine.base.Engine INSERT INTO country (name, code) VALUES (?, ?)
+2019-11-14 00:20:04,344 INFO sqlalchemy.engine.base.Engine (&#39;Other Country&#39;, &#39;UK&#39;)
+2019-11-14 00:20:04,345 INFO sqlalchemy.engine.base.Engine ROLLBACK
 
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>Traceback (most recent call last):
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/engine/base.py&#34;, line 1246, in _execute_context
-    cursor, statement, parameters, context
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/engine/default.py&#34;, line 581, in do_execute
-    cursor.execute(statement, parameters)
-sqlite3.IntegrityError: UNIQUE constraint failed: country.code
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File &#34;&lt;ipython-input-10-0c938d6cb6fe&gt;&#34;, line 10, in &lt;module&gt;
-    session.commit()
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/session.py&#34;, line 1027, in commit
-    self.transaction.commit()
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/session.py&#34;, line 494, in commit
-    self._prepare_impl()
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/session.py&#34;, line 473, in _prepare_impl
-    self.session.flush()
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/session.py&#34;, line 2470, in flush
-    self._flush(objects)
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/session.py&#34;, line 2608, in _flush
-    transaction.rollback(_capture_exception=True)
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/util/langhelpers.py&#34;, line 68, in __exit__
-    compat.reraise(exc_type, exc_value, exc_tb)
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/util/compat.py&#34;, line 153, in reraise
-    raise value
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/session.py&#34;, line 2568, in _flush
-    flush_context.execute()
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/unitofwork.py&#34;, line 422, in execute
-    rec.execute(self)
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/unitofwork.py&#34;, line 589, in execute
-    uow,
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/persistence.py&#34;, line 245, in save_obj
-    insert,
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/orm/persistence.py&#34;, line 1137, in _emit_insert_statements
-    statement, params
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/engine/base.py&#34;, line 982, in execute
-    return meth(self, multiparams, params)
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/sql/elements.py&#34;, line 287, in _execute_on_connection
-    return connection._execute_clauseelement(self, multiparams, params)
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/engine/base.py&#34;, line 1101, in _execute_clauseelement
-    distilled_params,
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/engine/base.py&#34;, line 1250, in _execute_context
-    e, statement, parameters, cursor, context
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/engine/base.py&#34;, line 1476, in _handle_dbapi_exception
-    util.raise_from_cause(sqlalchemy_exception, exc_info)
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/util/compat.py&#34;, line 398, in raise_from_cause
-    reraise(type(exception), exception, tb=exc_tb, cause=cause)
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/util/compat.py&#34;, line 152, in reraise
-    raise value.with_traceback(tb)
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/engine/base.py&#34;, line 1246, in _execute_context
-    cursor, statement, parameters, context
-  File &#34;/home/bab/Documents/teaching/CS591L1/venv/lib/python3.5/site-packages/sqlalchemy/engine/default.py&#34;, line 581, in do_execute
-    cursor.execute(statement, parameters)
-sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: country.code
+(sqlite3.IntegrityError) UNIQUE constraint failed: country.code
 [SQL: INSERT INTO country (name, code) VALUES (?, ?)]
-[parameters: (&#39;failure&#39;, &#39;UK&#39;)]
+[parameters: (&#39;Other Country&#39;, &#39;UK&#39;)]
 (Background on this error at: http://sqlalche.me/e/gkpj)
 </pre>
 </div>
@@ -13595,7 +13627,17 @@ sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Query">Query<a class="anchor-link" href="#Query">&#182;</a></h1>
+<h1 id="Data-Query">Data Query<a class="anchor-link" href="#Data-Query">&#182;</a></h1><p>SQLAlchemy supports querying tables via its <a href="https://docs.sqlalchemy.org/en/13/orm/query.html">Query API</a> and Query objects. The Query API includes all standard SQL query constructs, including filter, group by, order, and others. It also supports eager and lazy joins (more on that later), as well as a variety of aggregators.</p>
+<p>The query API constructs are used in the python side and then transformed into SQL statements that get executed at the database side. This is important for efficiency. One can achieve a similar functionality to a filter query by retrieving all the rows, and performing the filter in python via a for-loop and an if statement. However, this will be much slower:</p>
+<ol>
+<li>It will transfer all the data from the database to python, this is particular slow if the database is remote and requires network access.</li>
+<li>It will execute the filter in python, which is a slow interpreted language, as opposed to compiled and optimized binaries of the database system (usually C/C++).</li>
+<li>Database systems are optimized to perform many filters quickly, via index and caches and other techniques.</li>
+</ol>
+<p>Queries are lazy. Creating a query does not immediately execute it. This is because a query can be modified after creation several times (e.g. by calling the filter function). The query is executed when the developer indicate that it has been finalized, by calling .all(), .first(), .get(), or certain final aggregators such as .count()</p>
+<p>Query results can be a python object (instances of queries modules) or a list containing such objects, depending on whether get/first or all was used.</p>
+<p>These objects contain the data in the corresponding rows inside their attributes. This includes other rows that are related to them via a relation. These attributes and rows can be accessed directly by accessing the properites of the python objects.</p>
+
 </div>
 </div>
 </div>
@@ -13604,49 +13646,22 @@ sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed
 <div class="prompt input_prompt">In&nbsp;[11]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># create new session</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
 
-<span class="n">all_authors</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Author</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
-<span class="n">uk</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Country</span><span class="o">.</span><span class="n">code</span><span class="o">==</span><span class="s1">&#39;UK&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
-</pre></div>
+<span class="c1"># Get the country corresponding to country code &#39;uk&#39;</span>
+<span class="n">query1</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span>
+<span class="n">query1</span> <span class="o">=</span> <span class="n">query1</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Country</span><span class="o">.</span><span class="n">code</span><span class="o">==</span><span class="s1">&#39;UK&#39;</span><span class="p">)</span>
+<span class="n">query2</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Author</span><span class="p">)</span>
 
-    </div>
-</div>
-</div>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;queries created but not executed yet!</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
-<div class="output_wrapper">
-<div class="output">
+<span class="n">uk</span> <span class="o">=</span> <span class="n">query1</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+<span class="n">all_authors</span> <span class="o">=</span> <span class="n">query2</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
 
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">queries executed!&#39;</span><span class="p">)</span>
 
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stdout output_text">
-<pre>2019-11-13 11:33:40,382 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
-2019-11-13 11:33:40,386 INFO sqlalchemy.engine.base.Engine SELECT authors.id AS authors_id, authors.first_name AS authors_first_name, authors.last_name AS authors_last_name 
-FROM authors
-2019-11-13 11:33:40,389 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:40,396 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
-FROM country 
-WHERE country.code = ?
- LIMIT ? OFFSET ?
-2019-11-13 11:33:40,399 INFO sqlalchemy.engine.base.Engine (&#39;UK&#39;, 1, 0)
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[12]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">all_authors</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">all_authors</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">uk</span><span class="p">)</span>
 </pre></div>
 
@@ -13664,7 +13679,20 @@ WHERE country.code = ?
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>[&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
+<pre>queries created but not executed yet!
+
+2019-11-14 00:20:04,445 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,448 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country 
+WHERE country.code = ?
+ LIMIT ? OFFSET ?
+2019-11-14 00:20:04,450 INFO sqlalchemy.engine.base.Engine (&#39;UK&#39;, 1, 0)
+2019-11-14 00:20:04,456 INFO sqlalchemy.engine.base.Engine SELECT authors.id AS authors_id, authors.first_name AS authors_first_name, authors.last_name AS authors_last_name 
+FROM authors
+2019-11-14 00:20:04,457 INFO sqlalchemy.engine.base.Engine ()
+
+queries executed!
+[&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
 &lt;Country(id=1, name=United Kingdom, code=UK)&gt;
 </pre>
 </div>
@@ -13674,12 +13702,30 @@ WHERE country.code = ?
 </div>
 
 </div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Lazy-vs-Eager-Joins">Lazy vs Eager Joins<a class="anchor-link" href="#Lazy-vs-Eager-Joins">&#182;</a></h2><p>By default, relations are lazy. A query retrieves the data of the queried rows only. The data of other rows that are related is retrieved on demand, when that relationship is accessed.</p>
+<p>For example, below we can see that plain attributes of the row corresponding to the UK are immediately available. However, accessing the authors relationship issues an SQL query that fetches it on-demand, before returning the entries of that relationship.</p>
+<p>Note that future use of the relationship do not cause other SQL queries, since the relationship content gets cached after the first use.</p>
+
+</div>
+</div>
+</div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[13]:</div>
+<div class="prompt input_prompt">In&nbsp;[12]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">uk</span><span class="o">.</span><span class="n">authors</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;plain attributes are available&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;name = &#39;</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;code = &#39;</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Relationship are lazy, below you will see the SQL query performing the join</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">authors = &#39;</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">authors</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Relationship is cached after first use&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;authors = &#39;</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">authors</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -13696,11 +13742,21 @@ WHERE country.code = ?
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>2019-11-13 11:33:40,558 INFO sqlalchemy.engine.base.Engine SELECT authors.id AS authors_id, authors.first_name AS authors_first_name, authors.last_name AS authors_last_name 
+<pre>plain attributes are available
+name =  United Kingdom
+code =  UK
+
+Relationship are lazy, below you will see the SQL query performing the join
+
+2019-11-14 00:20:04,604 INFO sqlalchemy.engine.base.Engine SELECT authors.id AS authors_id, authors.first_name AS authors_first_name, authors.last_name AS authors_last_name 
 FROM authors, country_author 
 WHERE ? = country_author.country_id AND authors.id = country_author.author_id
-2019-11-13 11:33:40,561 INFO sqlalchemy.engine.base.Engine (1,)
-[&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
+2019-11-14 00:20:04,605 INFO sqlalchemy.engine.base.Engine (1,)
+
+authors =  [&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
+
+Relationship is cached after first use
+authors =  [&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
 </pre>
 </div>
 </div>
@@ -13709,15 +13765,26 @@ WHERE ? = country_author.country_id AND authors.id = country_author.author_id
 </div>
 
 </div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>When the query is defined, it can be configured to load certain relations eagerly as part of the initial SQL query. The join strategy (lazy or eager) can also be specified in the relationship definition at the module, which sets the default behavior for that relation.</p>
+<p>Eager loading is good for cases when we know that the relation will be accessed on many of the resulting objects. Since that will allow us to perform a single SQL query only, instead of several ones. Otherwise, lazy join is recommended.</p>
+
+</div>
+</div>
+</div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="prompt input_prompt">In&nbsp;[13]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="k">import</span> <span class="n">joinedload</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The following query will have a join in it eagerly&#39;</span><span class="p">)</span>
 <span class="n">uk</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">options</span><span class="p">(</span><span class="n">joinedload</span><span class="p">(</span><span class="n">Country</span><span class="o">.</span><span class="n">authors</span><span class="p">))</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Country</span><span class="o">.</span><span class="n">code</span><span class="o">==</span><span class="s1">&#39;UK&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Now authors will be ready immediately&#39;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">uk</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">authors</span><span class="p">)</span>
 </pre></div>
 
@@ -13735,14 +13802,15 @@ WHERE ? = country_author.country_id AND authors.id = country_author.author_id
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>2019-11-13 11:33:40,645 INFO sqlalchemy.engine.base.Engine SELECT anon_1.country_id AS anon_1_country_id, anon_1.country_name AS anon_1_country_name, anon_1.country_code AS anon_1_country_code, authors_1.id AS authors_1_id, authors_1.first_name AS authors_1_first_name, authors_1.last_name AS authors_1_last_name 
+<pre>The following query will have a join in it eagerly
+2019-11-14 00:20:04,708 INFO sqlalchemy.engine.base.Engine SELECT anon_1.country_id AS anon_1_country_id, anon_1.country_name AS anon_1_country_name, anon_1.country_code AS anon_1_country_code, authors_1.id AS authors_1_id, authors_1.first_name AS authors_1_first_name, authors_1.last_name AS authors_1_last_name 
 FROM (SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
 FROM country 
 WHERE country.code = ?
  LIMIT ? OFFSET ?) AS anon_1 LEFT OUTER JOIN (country_author AS country_author_1 JOIN authors AS authors_1 ON authors_1.id = country_author_1.author_id) ON anon_1.country_id = country_author_1.country_id
-2019-11-13 11:33:40,646 INFO sqlalchemy.engine.base.Engine (&#39;UK&#39;, 1, 0)
+2019-11-14 00:20:04,709 INFO sqlalchemy.engine.base.Engine (&#39;UK&#39;, 1, 0)
 
-
+Now authors will be ready immediately
 &lt;Country(id=1, name=United Kingdom, code=UK)&gt; [&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
 </pre>
 </div>
@@ -13755,30 +13823,42 @@ WHERE country.code = ?
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Transactions-and-Queries">Transactions and Queries<a class="anchor-link" href="#Transactions-and-Queries">&#182;</a></h2>
+<h2 id="Transactions-and-Queries">Transactions and Queries<a class="anchor-link" href="#Transactions-and-Queries">&#182;</a></h2><p>A transaction may include some data manipulation as well as queries. Additionally, there may be concurrent transactions performing queries as well.</p>
+<p>This raises a question of isolation. Should the effect of a pending (a transaction that has not been committed yet) be visible to queries made in that transaction, or other concurrent transactions?</p>
+<p>SQLAlchemy manages the isolation via flushes. All non-flushed changes are not visible to queries of any transaction. Changes that are flushed successfuly, are visible to other transaction. However, they may get rolled back if their issuing transaction fails. Remember, sessions autoflush changes by default.</p>
+
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
-<span class="n">session2</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session1</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">(</span><span class="n">autoflush</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">session2</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">(</span><span class="n">autoflush</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 <span class="n">country</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;United States&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;US&#39;</span><span class="p">)</span>
-<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">country</span><span class="p">)</span>
+<span class="n">session1</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">country</span><span class="p">)</span>
 
-<span class="n">countries1</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;US was added to session 1, but not flushed&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;US will not be visibile in either sessions!</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">countries1</span> <span class="o">=</span> <span class="n">session1</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
 <span class="n">countries2</span> <span class="o">=</span> <span class="n">session2</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">session1 --&gt;&#39;</span><span class="p">,</span> <span class="n">countries1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;session2 --&gt;&#39;</span><span class="p">,</span> <span class="n">countries2</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">countries1</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">countries2</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Flush issued! (notice there is no COMMIT below)&#39;</span><span class="p">)</span>
+<span class="n">session1</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">new</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">session2</span><span class="o">.</span><span class="n">new</span><span class="p">)</span>
-<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">US is flushed, now it will become visible!</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">countries1</span> <span class="o">=</span> <span class="n">session1</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="n">countries2</span> <span class="o">=</span> <span class="n">session2</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">session1 --&gt;&#39;</span><span class="p">,</span> <span class="n">countries1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;session2 --&gt;&#39;</span><span class="p">,</span> <span class="n">countries2</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Commit session 1&#39;</span><span class="p">)</span>
+<span class="n">session1</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </pre></div>
 
     </div>
@@ -13795,21 +13875,39 @@ WHERE country.code = ?
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>2019-11-13 11:33:40,761 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
-2019-11-13 11:33:40,764 INFO sqlalchemy.engine.base.Engine INSERT INTO country (name, code) VALUES (?, ?)
-2019-11-13 11:33:40,766 INFO sqlalchemy.engine.base.Engine (&#39;United States&#39;, &#39;US&#39;)
-2019-11-13 11:33:40,774 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+<pre>US was added to session 1, but not flushed
+US will not be visibile in either sessions!
+
+2019-11-14 00:20:04,793 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,794 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
 FROM country
-2019-11-13 11:33:40,777 INFO sqlalchemy.engine.base.Engine ()
-2019-11-13 11:33:40,783 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
-2019-11-13 11:33:40,786 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+2019-11-14 00:20:04,795 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:04,797 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,798 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
 FROM country
-2019-11-13 11:33:40,789 INFO sqlalchemy.engine.base.Engine ()
-[&lt;Country(id=1, name=United Kingdom, code=UK)&gt;, &lt;Country(id=2, name=United States, code=US)&gt;]
-[&lt;Country(id=1, name=United Kingdom, code=UK)&gt;, &lt;Country(id=2, name=United States, code=US)&gt;]
-IdentitySet([])
-IdentitySet([])
-2019-11-13 11:33:40,797 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-14 00:20:04,798 INFO sqlalchemy.engine.base.Engine ()
+
+session1 --&gt; [&lt;Country(id=1, name=United Kingdom, code=UK)&gt;]
+session2 --&gt; [&lt;Country(id=1, name=United Kingdom, code=UK)&gt;] 
+
+Flush issued! (notice there is no COMMIT below)
+2019-11-14 00:20:04,801 INFO sqlalchemy.engine.base.Engine INSERT INTO country (name, code) VALUES (?, ?)
+2019-11-14 00:20:04,802 INFO sqlalchemy.engine.base.Engine (&#39;United States&#39;, &#39;US&#39;)
+
+US is flushed, now it will become visible!
+
+2019-11-14 00:20:04,805 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country
+2019-11-14 00:20:04,805 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:04,808 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country
+2019-11-14 00:20:04,809 INFO sqlalchemy.engine.base.Engine ()
+
+session1 --&gt; [&lt;Country(id=1, name=United Kingdom, code=UK)&gt;, &lt;Country(id=2, name=United States, code=US)&gt;]
+session2 --&gt; [&lt;Country(id=1, name=United Kingdom, code=UK)&gt;, &lt;Country(id=2, name=United States, code=US)&gt;] 
+
+Commit session 1
+2019-11-14 00:20:04,811 INFO sqlalchemy.engine.base.Engine COMMIT
 </pre>
 </div>
 </div>
@@ -13821,28 +13919,41 @@ IdentitySet([])
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Updating-a-Row">Updating a Row<a class="anchor-link" href="#Updating-a-Row">&#182;</a></h2>
+<h2 id="Updating-a-Row">Updating a Row<a class="anchor-link" href="#Updating-a-Row">&#182;</a></h2><p>After an object has been retrieved via a query, its data can be modified via regular python assignments to its attributes. This does not issue the update to the database yet. Instead, the update object must be added to a session, and that session has to be committed (explicitly or implicitly) for the update to get committed to the database.</p>
+<p>The session can also be flushed, to make the update visible without committing it.</p>
+<p>Update objects are marked by the session as "dirty".</p>
+
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="prompt input_prompt">In&nbsp;[15]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
 
-<span class="n">rowling</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Author</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+<span class="c1"># get the country with primary key (in this case id) = 2</span>
 <span class="n">usa</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
 
-<span class="n">rowling_usa</span> <span class="o">=</span> <span class="n">CountryAuthor</span><span class="p">(</span><span class="n">author_id</span><span class="o">=</span><span class="n">rowling</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">country_id</span><span class="o">=</span><span class="n">usa</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">native</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rowling_usa</span><span class="p">)</span>
+<span class="c1"># print usa to the screen</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">usa</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
 
-<span class="n">usa</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;United States of America&#39;</span>
+<span class="c1"># update its name</span>
+<span class="n">usa</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;United State of America&#39;</span>
 <span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">usa</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">new</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">dirty</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;new = &#39;</span><span class="p">,</span> <span class="n">session</span><span class="o">.</span><span class="n">new</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;dirty = &#39;</span><span class="p">,</span> <span class="n">session</span><span class="o">.</span><span class="n">dirty</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="c1"># commit</span>
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -13859,17 +13970,21 @@ IdentitySet([])
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>2019-11-13 11:33:40,852 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
-2019-11-13 11:33:40,853 INFO sqlalchemy.engine.base.Engine SELECT authors.id AS authors_id, authors.first_name AS authors_first_name, authors.last_name AS authors_last_name 
-FROM authors
- LIMIT ? OFFSET ?
-2019-11-13 11:33:40,854 INFO sqlalchemy.engine.base.Engine (1, 0)
-2019-11-13 11:33:40,856 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+<pre>2019-11-14 00:20:04,954 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,957 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
 FROM country 
 WHERE country.id = ?
-2019-11-13 11:33:40,856 INFO sqlalchemy.engine.base.Engine (2,)
-IdentitySet([&lt;__main__.CountryAuthor object at 0x7f55cb5d5c18&gt;])
-IdentitySet([&lt;Country(id=2, name=United States of America, code=US)&gt;])
+2019-11-14 00:20:04,959 INFO sqlalchemy.engine.base.Engine (2,)
+
+&lt;Country(id=2, name=United States, code=US)&gt;
+
+new =  IdentitySet([])
+dirty =  IdentitySet([&lt;Country(id=2, name=United State of America, code=US)&gt;]) 
+
+2019-11-14 00:20:04,971 INFO sqlalchemy.engine.base.Engine UPDATE country SET name=? WHERE country.id = ?
+2019-11-14 00:20:04,973 INFO sqlalchemy.engine.base.Engine (&#39;United State of America&#39;, 2)
+2019-11-14 00:20:04,976 INFO sqlalchemy.engine.base.Engine COMMIT
+
 </pre>
 </div>
 </div>
@@ -13878,12 +13993,26 @@ IdentitySet([&lt;Country(id=2, name=United States of America, code=US)&gt;])
 </div>
 
 </div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Relations can also be updated similarly. One-to-many relations are updated via updating an existing object relation. Many-to-Many relations may be updated via creating a new instance of the secondary/association module, or via the relation directly.</p>
+
+</div>
+</div>
+</div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[17]:</div>
+<div class="prompt input_prompt">In&nbsp;[16]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">rowling</span><span class="o">.</span><span class="n">countries</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Make J. K. Rowling american! (just cause I can)</span>
+<span class="n">rowling</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Author</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+<span class="n">rowling</span><span class="o">.</span><span class="n">countries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">usa</span><span class="p">)</span>
+
+<span class="c1"># Alternative way: this allows setting data on the association object</span>
+<span class="c1"># rowling_usa = CountryAuthor(author_id=rowling.id, country_id=usa.id, native=False)</span>
+<span class="c1"># session.add(rowling_usa)</span>
 
 <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
 </pre></div>
@@ -13902,16 +14031,22 @@ IdentitySet([&lt;Country(id=2, name=United States of America, code=US)&gt;])
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>2019-11-13 11:33:40,967 INFO sqlalchemy.engine.base.Engine UPDATE country SET name=? WHERE country.id = ?
-2019-11-13 11:33:40,969 INFO sqlalchemy.engine.base.Engine (&#39;United States of America&#39;, 2)
-2019-11-13 11:33:40,975 INFO sqlalchemy.engine.base.Engine INSERT INTO country_author (author_id, country_id, native) VALUES (?, ?, ?)
-2019-11-13 11:33:40,978 INFO sqlalchemy.engine.base.Engine (1, 2, 0)
-2019-11-13 11:33:40,983 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+<pre>2019-11-14 00:20:05,068 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:05,069 INFO sqlalchemy.engine.base.Engine SELECT authors.id AS authors_id, authors.first_name AS authors_first_name, authors.last_name AS authors_last_name 
+FROM authors
+ LIMIT ? OFFSET ?
+2019-11-14 00:20:05,069 INFO sqlalchemy.engine.base.Engine (1, 0)
+2019-11-14 00:20:05,071 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
 FROM country, country_author 
 WHERE ? = country_author.author_id AND country.id = country_author.country_id
-2019-11-13 11:33:40,986 INFO sqlalchemy.engine.base.Engine (1,)
-[&lt;Country(id=1, name=United Kingdom, code=UK)&gt;, &lt;Country(id=2, name=United States of America, code=US)&gt;]
-2019-11-13 11:33:40,992 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-14 00:20:05,071 INFO sqlalchemy.engine.base.Engine (1,)
+2019-11-14 00:20:05,073 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country 
+WHERE country.id = ?
+2019-11-14 00:20:05,074 INFO sqlalchemy.engine.base.Engine (2,)
+2019-11-14 00:20:05,074 INFO sqlalchemy.engine.base.Engine INSERT INTO country_author (author_id, country_id, native) VALUES (?, ?, ?)
+2019-11-14 00:20:05,075 INFO sqlalchemy.engine.base.Engine (1, 2, 1)
+2019-11-14 00:20:05,076 INFO sqlalchemy.engine.base.Engine COMMIT
 </pre>
 </div>
 </div>
