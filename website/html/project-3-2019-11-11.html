@@ -13254,6 +13254,7 @@ node player.js
 </ol>
 <h5 id="Matrix-vector-multiplication">Matrix-vector multiplication<a class="anchor-link" href="#Matrix-vector-multiplication">&#182;</a></h5><p>You must implement a matrix-vector multiplication function with header: void mult(int n, int*<em> mat, int</em> vec, int* result), where vec and mat are a vector and square matrix of dimension n.</p>
 <p>Your code should compute inner product between every row i in the matrix mat and vec in parallel, and store the result at index i of the output vector. You can use a cilk_for to perform the parallelizm for you automatically.</p>
+<p>cilk_for is susceptible to a lot of implicit bottlenecks. It is important that you use cilk_for for the matrix-vector mult function, and not for the inner function, otherwise, you will not see a speed up. See <a href="https://jayconrod.com/posts/29/parallelization--harder-than-it-looks">here</a> for more details.</p>
 <h5 id="Main-function">Main function<a class="anchor-link" href="#Main-function">&#182;</a></h5><p>Your main function should take the dimension n as the first command line argument, and then generate a random vector and matrix of size n with values between 0 and 10. Your main function should then call mult(...) on these parameters.</p>
 <p>Your program must measure the time required to compute mult. Be sure to measure the time accurately: generating the random matrix and allocating arrays should not be a part of the time measurement.</p>
 <p>Your program should output the time to the console.</p>

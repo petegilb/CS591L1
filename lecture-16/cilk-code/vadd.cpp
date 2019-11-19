@@ -15,6 +15,14 @@ void vadd(int* A, int* B, int* C, int n) {
   }
 }
 
+// this wont really speed things up
+// https://jayconrod.com/posts/29/parallelization--harder-than-it-looks
+void vadd2(int* A, int* B, int* C, int n) {
+  cilk_for (int i = 0; i < n; i++) {
+    C[i] = A[i] + B[i];
+  }
+}
+
 void fill_array(int *A, int n) {
   for (int i = 0; i < n; i++) {
     A[i] = i;
