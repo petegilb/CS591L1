@@ -322,9 +322,10 @@
           "date": "2019-11-19",
           "type": "lecture",
           "topics": "cilk intro",
+          "notes": "https://github.com/KinanBab/CS591L1/tree/master/lecture-16",
           "details": [
-            "task parallel programming",
-            "cilk syntax and runtime",
+            "quick C tutorial",
+            "cilk syntax and examples",
             "work vs span",
             "<a href='http://supertech.lcs.mit.edu/cilk/lecture-1.pdf'>Leiserson cilk lecture 1</a>"
           ]
@@ -333,6 +334,7 @@
           "date": "2019-11-21",
           "type": "lecture",
           "topics": "cilk implementation",
+          "notes": "https://github.com/KinanBab/CS591L1/tree/master/lecture-16",
           "details": [
             "cilk scheduler",
             "cilk implementation history",
@@ -435,7 +437,11 @@
             (entry.topics ? (':</span>' + '<br/>' + entry.topics) : '');
 
         if (entry.notes) {
-          type.innerHTML += '<br><a href="'+LINK_PREFIX + entry.notes+'">lecture notes</a>';
+          var link = entry.notes;
+          if (!entry.notes.startsWith('http://') && !entry.notes.startsWith('https://')) {
+            link = LINK_PREFIX + link;
+          }
+          type.innerHTML += '<br><a href="'+link+'">lecture notes</a>';
         } else if (entry.notes === '') {
           type.innerHTML += '<br><span class="type">in progress</span></b>';
         }
