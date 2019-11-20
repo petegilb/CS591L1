@@ -13084,7 +13084,7 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p><strong>Due: Monday 25 Nov 2019 11:59PM</strong></p>
+<p><strong>Due: Wednesday 27 Nov 2019 11:59PM</strong></p>
 <p>This project's goal is to give you some practice using some of the libraries and use cases we are going through in class. It has the following learning outcomes:</p>
 <ol>
 <li>Make you comfortable using JIFF, SQLAlchemy, and CILK.</li>
@@ -13187,38 +13187,42 @@ node player.js
 <li>Run the designated query using sqlalchemy.</li>
 </ol>
 <p>You can organize your code into several python files for clarity. You should provide a <code>problem2.py</code> python file that contains the main entry point to your program, imports any other python file(s), and performs the 4 tasks above in order.</p>
-<h3 id="Schema-(15-points)">Schema (15 points)<a class="anchor-link" href="#Schema-(15-points)">&#182;</a></h3><p>You need to create the following tables with the following schema:
-<strong>Teams:</strong></p>
+<h3 id="Schema-(15-points)">Schema (15 points)<a class="anchor-link" href="#Schema-(15-points)">&#182;</a></h3><p>You need to create the following tables with the following schema:</p>
+<p><strong>Teams:</strong></p>
 <ol>
-<li>Team id: auto-generated number, primary key</li>
+<li>Team id: auto-generated integer, primary key</li>
 <li>Team name: string, unique</li>
 <li>Players: relationship listing the players of the team per year</li>
 </ol>
 <p><strong>Players:</strong></p>
 <ol>
-<li>Player id: auto-generated number, primary key</li>
+<li>Player id: auto-generated integer, primary key</li>
 <li>Player name: string, unique</li>
 <li>Position: string</li>
 <li>Teams: relationship listing the teams of the player per year</li>
 </ol>
+<p><em>Note: a player may change position throughout his career. To simplify things, ignore any discrepancies like that, and use the first position you encounter for every player.</em></p>
 <p><strong>Player/Teams Association Table:</strong></p>
 <ol>
 <li>Association id: auto-generated integer, primary key</li>
-<li>Player name: string</li>
-<li>Team name: string</li>
+<li>Player id: integer, foreign key</li>
+<li>Team id: integer, foreign key</li>
 <li>Season: integer (2010-2015)</li>
 </ol>
 <p>Columns 2, 3, and 4 should be unique together.</p>
 <p><strong>Games:</strong></p>
 <ol>
 <li>Game id: auto-generated integer, primary key.</li>
-<li>Home team name: relationship with Teams</li>
-<li>Away team name: relationship with Teams</li>
+<li>Home team id: integer, foreign key</li>
+<li>Away team id: integer, a different foreign key</li>
 <li>Season: integer (2010-2015)</li>
 <li>Week: integer (1-17)</li>
 <li>Home score: integer</li>
 <li>Away score: integer</li>
+<li>Home team: relationship with teams</li>
+<li>Away team: a different relationship with teams</li>
 </ol>
+<p><strong>Remember: Relationships are logical sqlalchemy entities that do not create physical columns. Relationships are defined based on physical foreign key columns.</strong></p>
 <h3 id="Data-(20-points)">Data (20 points)<a class="anchor-link" href="#Data-(20-points)">&#182;</a></h3><p>We provide you with CSV files containing the data required to fill the above database. You must write and use python functions to read this data from the CSV files and insert it into the database via sqlalchemy. The csv files are available at the <a href="https://github.com/KinanBab/CS591L1/tree/master/project-3/Problem2/data/">course github repo</a>.</p>
 <p>Note that the csv files contain many columns that are not contained in our schema above, such columns should be ignored. Additionally, the csv files contain unique identifiers for games and players, you are free to keep the same ids, or ignored them, and use auto-generated ones from sqlalchemy.</p>
 <p>For every season, we provide to csv files: reg_games and reg_roster. The first is a list of all the regular season games played that season, including team names and scores. The second is a list of all the players in that regular season and their corresponding team.</p>
