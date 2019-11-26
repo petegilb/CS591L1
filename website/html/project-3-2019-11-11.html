@@ -13250,13 +13250,13 @@ node player.js
 <li>plot_w.png|jpg</li>
 </ol>
 <h3 id="Implementation-(20-points)">Implementation (20 points)<a class="anchor-link" href="#Implementation-(20-points)">&#182;</a></h3><p>You should implement an efficient parallel inner-product function using CILK, and use it to implement efficient matrix-vector multiplication.</p>
-<h5 id="Inner-product">Inner-product<a class="anchor-link" href="#Inner-product">&#182;</a></h5><p>You must implement an inner-product function with header: int inner(int n, int<em> vec1, int</em> vec2), where n is the length of both vectors.</p>
+<h5 id="Inner-product">Inner-product<a class="anchor-link" href="#Inner-product">&#182;</a></h5><p>You must implement an inner-product function with header: int inner(int n, int* vec1, int* vec2), where n is the length of both vectors.</p>
 <p>Your function must behave as follows:</p>
 <ol>
 <li>if n is less than 10, it performs the inner product sequentially.</li>
 <li>otherwise, it must make two recursive parallel calls (using cilk_spawn), the first computes the inner produt of the first half of vectors, the second computes it for the second half, and then return the sum.</li>
 </ol>
-<h5 id="Matrix-vector-multiplication">Matrix-vector multiplication<a class="anchor-link" href="#Matrix-vector-multiplication">&#182;</a></h5><p>You must implement a matrix-vector multiplication function with header: void mult(int n, int*<em> mat, int</em> vec, int* result), where vec and mat are a vector and square matrix of dimension n.</p>
+<h5 id="Matrix-vector-multiplication">Matrix-vector multiplication<a class="anchor-link" href="#Matrix-vector-multiplication">&#182;</a></h5><p>You must implement a matrix-vector multiplication function with header: void mult(int n, int** mat, int* vec, int* result), where vec and mat are a vector and square matrix of dimension n.</p>
 <p>Your code should compute inner product between every row i in the matrix mat and vec in parallel, and store the result at index i of the output vector. You can use a cilk_for to perform the parallelizm for you automatically.</p>
 <p>cilk_for is susceptible to a lot of implicit bottlenecks. It is important that you use cilk_for for the matrix-vector mult function, and not for the inner function, otherwise, you will not see a speed up. See <a href="https://jayconrod.com/posts/29/parallelization--harder-than-it-looks">here</a> for more details.</p>
 <h5 id="Main-function">Main function<a class="anchor-link" href="#Main-function">&#182;</a></h5><p>Your main function should take the dimension n as the first command line argument, and then generate a random vector and matrix of size n with values between 0 and 10. Your main function should then call mult(...) on these parameters.</p>
