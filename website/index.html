@@ -102,7 +102,6 @@
           "date": "2019-09-10",
           "type": "lecture",
           "topics": "parsing &amp;<br/> parsers",
-          "notes": "lecture-02-semantics-transformations-analysis.html",
           "details": [
             "more on abstract syntax trees",
             "working with ASTs in Python",
@@ -114,6 +113,7 @@
           "date": "2019-09-12",
           "type": "lecture",
           "topics": "semantics &amp;<br/>interpretation",
+          "notes": "lecture-02-semantics-transformations-analysis.html",
           "details": [
             "working with ASTs in JavaScript",
             "interpretation",
@@ -276,7 +276,133 @@
             "type rules for null-safety (project 2)",
             "solutions for project 2"
           ]
-        }
+        },
+        {
+          "date": "2019-11-05",
+          "type": "lecture",
+          "topics": "sql and<br/>sqlalchemy",
+          "details": [
+            "<a href=\"https://github.com/KinanBab/CS591L1/tree/master/project-2-solutions/\">project 2 solutions</a>",
+            "<a href=\"https://github.com/KinanBab/CS591L1/tree/master/lecture-13/\">sample web application with sql<br/>directly embedded in node.js</a>",
+            "motivation and intro to sqlalchemy"
+          ]
+        },
+        {
+          "date": "2019-11-11",
+          "type": "project",
+          "details": [
+            "<b><a href=\""+LINK_PREFIX+"project-3-2019-11-11.html\">project #3</a> assigned</b>"
+          ]
+        },
+        {
+          "date": "2019-11-12",
+          "type": "lecture",
+          "topics": "sqlalchemy<br/>tutorial",
+          "notes": "lecture-14-sqlalchemy.html",
+          "details": [
+            "<a href=\"https://docs.sqlalchemy.org/en/13/orm/tutorial.html\">sqlalchemy official tutorial</a>",
+            "schema definition and creation",
+            "inserting and updating rows",
+            "basic query API"
+          ]
+        },
+        {
+          "date": "2019-11-14",
+          "type": "lecture",
+          "topics": "sqlalchemy<br/>advanced use<br/>&amp; implementation",
+          "notes": "lecture-15-sqlalchemy-implementation.html",
+          "details": [
+            "mass data manipulation",
+            "group by, aggregate, and ordered queries",
+            "metaclasses and declarative base",
+            "Query class implementation"
+          ]
+        },
+        {
+          "date": "2019-11-19",
+          "type": "canceled"
+        },
+        {
+          "date": "2019-11-21",
+          "type": "lecture",
+          "topics": "cilk intro",
+          "notes": "https://github.com/KinanBab/CS591L1/tree/master/lecture-16",
+          "details": [
+            "quick C tutorial",
+            "cilk syntax and examples",
+            "work vs span",
+            "<a href='http://supertech.lcs.mit.edu/cilk/lecture-1.pdf'>Leiserson cilk lecture 1</a>"
+          ]
+        },
+        {
+          "date": "2019-11-26",
+          "type": "lecture",
+          "topics": "cilk implementation",
+          "notes": "https://github.com/KinanBab/CS591L1/tree/master/lecture-16",
+          "details": [
+            "cilk scheduler",
+            "cilk implementation history",
+            "<a href='http://supertech.lcs.mit.edu/cilk/lecture-2.pdf'>Leiserson cilk lecture 2</a>",
+            "<a href='http://supertech.lcs.mit.edu/cilk/lecture-3.pdf'>Leiserson cilk lecture 3</a>"
+          ]
+        },
+        {
+          "date": "2019-11-27",
+          "time": "11:59 PM EDT",
+          "type": "project",
+          "details": [
+            "<b><a href=\""+LINK_PREFIX+"project-3-2019-11-11.html\">project #3</a> due</b>"
+          ]
+        },
+        {
+          "date": "2019-11-28",
+          "type": "noclass",
+          "topics": "thanksgiving break"
+        },
+        {
+          "date": "2019-11-28",
+          "time": "11:59 PM EDT",
+          "type": "project",
+          "details": [
+            "<b><a href=\""+LINK_PREFIX+"final-project.html\">final project</a> proposals due</b>"
+          ]
+        },
+        {
+          "date": "2019-12-3",
+          "type": "lecture",
+          "topics": "tensorflow",
+          "details": [
+          ]
+        },
+        {
+          "date": "2019-12-5",
+          "type": "exam",
+          "details": [
+            "up to programming paradigms",
+            "type systems"
+          ]
+        },
+        {
+          "date": "2019-12-10",
+          "type": "lecture",
+          "topics": "tensorflow",
+          "details": [
+          ]
+        },
+        {
+          "date": "2019-11-17",
+          "type": "poster session",
+          "details": [
+          ]
+        },
+        {
+          "date": "2019-11-18",
+          "time": "11:59 PM EDT",
+          "type": "project",
+          "details": [
+            "<b><a href=\""+LINK_PREFIX+"final-project.html\">final project</a> due</b>"
+          ]
+        },
       ]
     };
 
@@ -308,7 +434,11 @@
             (entry.topics ? (':</span>' + '<br/>' + entry.topics) : '');
 
         if (entry.notes) {
-          type.innerHTML += '<br><a href="'+LINK_PREFIX + entry.notes+'">lecture notes</a>';
+          var link = entry.notes;
+          if (!entry.notes.startsWith('http://') && !entry.notes.startsWith('https://')) {
+            link = LINK_PREFIX + link;
+          }
+          type.innerHTML += '<br><a href="'+link+'">lecture notes</a>';
         } else if (entry.notes === '') {
           type.innerHTML += '<br><span class="type">in progress</span></b>';
         }
@@ -393,8 +523,8 @@
             <ul>
               <!--li>to be posted</li-->
               <li><a href="https://github.com/KinanBab/CS591L1---Embedded-Languages-And-Frameworks">lecture notes</a> <!--(w/ projects &amp; organization notes)--></li>
-              <li><b><a href="https://lapets.github.io/course-embedded-languages-and-frameworks/project-2019-09-27.html">project #1</a></b></li>
-              <!--li><b><a href="s.php?#project2">project #2</a></b></li>
+              <!--li><b><a href="https://lapets.github.io/course-embedded-languages-and-frameworks/project-2019-09-27.html">project #1</a></b></li>
+              <li><b><a href="s.php?#project2">project #2</a></b></li>
               <li><b><a href="s.php?#project3">project #3</a></b></li-->
               <!--li><b><a href="s.php?#project4">project #4</a></b></li-->
             </ul>
@@ -403,6 +533,7 @@
             <ul>
               <li><a href="https://www.python.org/downloads/">Python 3.6</a>+</li>
               <li><a href="https://nodejs.org/">Node.js 10</a>+</li>
+              <li><a href="http://cilk.mit.edu/">Cilk</a> and C/C++<li>
             </ul>
           </li>
           <!--li><span>other reading materials (not required):</span>

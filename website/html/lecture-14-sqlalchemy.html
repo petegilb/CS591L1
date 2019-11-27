@@ -2,7 +2,7 @@
 <html>
 <head><meta charset="utf-8" />
 
-<title>lecture-12-type-systems</title>
+<title>lecture-14-sqlalchemy-tutorial</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
@@ -13077,28 +13077,21 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Lecture-12---Null-Safe-Variables-and-Type-Systems">Lecture 12 - Null-Safe Variables and Type Systems<a class="anchor-link" href="#Lecture-12---Null-Safe-Variables-and-Type-Systems">&#182;</a></h1>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>In this lecture, we will look at the solutions to <a href="https://kinanbab.github.io/CS591L1/website/html/project-2-2019-10-21.html">mini-project/homework 2</a>. Through these solutions, we will look more formally at types systems and typing rules.</p>
-<p>In this problem, you were tasked with implementing a tool that can analyze programs, and statically enforce that protected variables in these programs are never assigned null. In these notes, we will restrict ourselves to python programs.</p>
-<h3 id="Syntax">Syntax<a class="anchor-link" href="#Syntax">&#182;</a></h3><p>For simplicity, the problem restricted the constructs that the tool must support to be: (1) function definitions (2) function calls (3) variable assignment (4) and return statements. This will be the restricted syntax of our supported subset of the python language:</p>
-
-<pre><code>program := statement*
-statement := functionDefinition | functionCall | assignmentStatement | returnStatement
-
-functionDefinition := 'def' identifier '(' (identifier ( ',' identifier )* )? ')' ':' statement*
-functionCall := identifier '(' (expression ( ',' expression )* ) ? ')'
-assignmentStatement := identifier '=' expression
-returnStatement := 'return' expression
-
-expression := numericaLiteral | stringLiteral | 'None' | identifier | functionCall
-...</code></pre>
-<h3 id="Semantics">Semantics<a class="anchor-link" href="#Semantics">&#182;</a></h3><p>The problem relies on regular python semantics. These can be formally defined in many ways. We will not attempt to formalize them here. The semantics are more or less obvious due to the extreme restrictions on our syntax. Note that in a formal tool with associated formal proofs the semantics need to be defined rigorously.</p>
+<h1 id="SQLAlchemy-and-Object-Relational-Model-(ORMs)">SQLAlchemy and Object Relational Model (ORMs)<a class="anchor-link" href="#SQLAlchemy-and-Object-Relational-Model-(ORMs)">&#182;</a></h1><h2 id="Motivation">Motivation<a class="anchor-link" href="#Motivation">&#182;</a></h2><p>SQL-based relational databases are a great way to store and query relational data. SQL database systems (e.g. Postgres) are optimized for fast query of data and efficient storage, via a variety of techniques such as indexing or compression.</p>
+<p>SQL provides us with a descriptive language that allows us to create and modify schemas (e.g. the structure of tables and their relations), as well as inserting, updating, and querying data. SQL is a domain specific language. It does not have any programming capabilities beyond database functionalities.</p>
+<p>Database systems are commonly used as a backend data store for applications, especially web and mobile applications. Large applications of this sort are written in a variety of layers and languages. Common backends languages including Python and node.js.</p>
+<p>This poses a challenge. Backends written in Python or similar languages must be able to interact with database systems through SQL. Legacy designs suggest embedding SQL commands into the backend in a naive way: the SQL commands are written as string literals in the backend program, and then passed to some intermediate interface or driver responsible for passing them to the database system, and retrieving the result.</p>
+<p>This technique was very popular in the early days of backend and web development. However, it had several drawbacks. First, since the SQL statements in the backend are string literals, manipulating them was restricted to string operations, such as concatenation or template instatiations, which is somewhat low level. Second, writing SQL statements as string literals meant little IDE and toolchain support for them, it also is very error prone. Third, such a design posed several vulnerabilities, SQL commands were represented as string literals and assigned to variables, which by definition were used throughout the backend, and sometimes modified. Every access or modification to a variable like that posed an attack surface (or a potential bug) for hackers to abuse. A prime example of such vulnerability is <a href="https://www.owasp.org/index.php/SQL_Injection">SQL-injection</a>.</p>
+<p>As backend development became increasingly important, its toolchains and frameworks received increased attention from the community. This led to the invention of ORMs. SQLalchemy is one of the most popular and mature ORMs available for python. ORMs embed SQL into their host language in a more sophisticated way. Developers can issue SQL commands without having to write SQL statements explicitly as strings. Instead, developers use typical constructs of the host language to represent the query logically, which is automatically translated into <strong>safe</strong> SQL statements via the ORM.</p>
+<p>ORMs are generally a deep embedding. Constructs provided by the ORM (e.g. the capability to query data from a database) are represented as data types (e.g. classes and objects) in the host language, that are defined and provided by the ORM, which can be manipulated by the developers via the ORM's API, to issue SQL statements.</p>
+<p>While SQL is based on the concepts of tables and relationship (e.g. foreign keys) between them, ORMs are based on classes and objects. An ORM allows developers to represent a table as a class in the host language. Rows in that table are then represented as objects that are instances of the corresponding class. A relationship between tables is represented via references between the associated objects.</p>
+<p>For example, instead of using a statement like this:</p>
+<div class="highlight"><pre><span></span><span class="k">SELECT</span> <span class="n">user_id</span> <span class="k">FROM</span> <span class="n">users</span> <span class="k">WHERE</span> <span class="n">username</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span> <span class="k">AND</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">;</span>
+</pre></div>
+<p>An ORM supports achieving the same effect via class and objects in the host language:</p>
+<div class="highlight"><pre><span></span><span class="c1"># User is a class representing the users table</span>
+<span class="n">User</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">user_id</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">AND</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">username</span><span class="o">==</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="n">User</span><span class="o">.</span><span class="n">password</span><span class="o">==</span><span class="s1">&#39;bar&#39;</span><span class="p">))</span>
+</pre></div>
 
 </div>
 </div>
@@ -13106,236 +13099,961 @@ expression := numericaLiteral | stringLiteral | 'None' | identifier | functionCa
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Null-Safety">Null-Safety<a class="anchor-link" href="#Null-Safety">&#182;</a></h2><p>The problem definition outlines the different cases that the tool must check for. These cases are shown in an intuitive way in the problem definition for simplicity, and appear ad-hoc. However, they are not.</p>
-<p>One way to produce such list of cases is to go over all combinations of statements allowed by the syntax, look at their associated formal semantics, and list charactristics of which combinations are forbidden. This was indeed our thought process while creating the homework description.</p>
-<p>Think of the restricted sytnax (and associated semantics) shown above. Which of the statements can affect null-safety? Null-safety is a property of varaibles. Therefore, the statements that can affect it are statements that change the value assigned to a variable.</p>
-<p>The most obvious case is variable assignment. It can assign None directly to a varaible, or indirectly by assigning a variable or expression whose value is really None. This is the first case our tool must check for. Note that this already creates a first difficulty. We need to devise a way that allows us to determine if a variable is None or not to be able to check assignments to other variables, as well as a similar way to determine if a function call returns None or not.</p>
-<p>The second case is more implicit: function calling. When a function is called, the given arguments are assigned to the function parameters. If some of the function parameters are protected, then the function cannot be called in a way that sets these parameters to None, either directly (by passing None explicitly) or indirectly (by passing an expressions whose value is None). We are faced with the same difficulty here, since arguments in a function call can be a variable or an expression.</p>
-<p>In general, determining if an expression is None or not with absolute accuracy is undecidable. However, we can be conservative. We can come up with an approach that detects None expressions always, but may mistake some expressions that are not None as None expressions. Another way to describe such an approach is to say that it errors on the side of caution, when it cannot determine if an expression is None or not, it will assume it is None to be safe.</p>
-<p>This is one fundemental idea behind type systems in programming languages. A strongly typed programming language can sometimes restrict the behavior of the programmer in certain cases when the type checker cannot really determine if the expressions match up to the right type. In such cases, the programmer is required to perform some additional work to convince the type checker that things are ok, or to tell the type checker to accept the expressions, one example is type casting (e.g. in Java or C++).</p>
-<p>The problem does not require that the tool be implemented using types. Mainly because python is not statically typed, and it will be too cumbersome to change it to support better static typing for null-safety. Instead, the problem suggests a different approach, variables (and functions) whose names start with '_n_' are assumed to be protected (i.e. have a null-safe types), while other are assumed to be unprotected (i.e. have a nullable type).</p>
-<p>This approache is common in many program analysis tools. Although it may be specified differently. In our case, we require the programmer to input some helpful annotations about the type of variables via their names. Other tools may ask the programmer to input such information using special comments, special syntax, decorators or annotations, etc.</p>
-<p>Finally, this approache gives us a third case to consider. A function that is marked as null-safe (i.e starts with '_n_') cannot return None (either directly or indirectly via an unsafe expression). Therefore, our tool must look at return statements as well. Note that this solves our previous difficulties: we can now check if a variable or function is safe by checking its name.</p>
+<h1 id="SQLAlchemy">SQLAlchemy<a class="anchor-link" href="#SQLAlchemy">&#182;</a></h1><p>In this course, we will focus specifically on SQLAlchemy as a sample ORM. SQLAlchemy is a terrific use case for studying embedded frameworks, since it uses a lot of the techniques we covered in class previously, so that it can achieve a friendly deep embedding into Python, that interfaces with SQL and databases. These notes follow closely this <a href="https://docs.sqlalchemy.org/en/13/orm/tutorial.html">great SQLAlchemy tutorial</a>.</p>
+<p>The tutorial has more details about SQLAlchemy's capabilites and API, while the notes focus on providing a high level summary of the capabilities, and certain aspects that are interesting from an embedding point of view.</p>
+<h2 id="Connecting-to-a-Database">Connecting to a Database<a class="anchor-link" href="#Connecting-to-a-Database">&#182;</a></h2><p>The first step of using SQLAlchemy is to connect it to the desired database system. This is achieved via creating an <strong>engine</strong>, which is the SQLAlchemy intermediate layer that sits between the developers python code, and the database system.</p>
+<p>The engine is responsible for communicating with the database system, including sending and receiving network messages if the database is remote. The engine is also responsible for generating SQL queries that correspond to the developers code, using the syntax and features of the specific database system it is connected to. It is also responsible for parsing the results of queries into their corresponding python objects and values.</p>
+<p>To create an engine, all you really need to do is provide SQLAlchemy with the address of the database to connect to. Below, we will connect to an in-memory sqlite database. This assumes that your computer has sqlite3 installed.</p>
 
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">sqlalchemy</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="k">import</span> <span class="n">create_engine</span>
+
+<span class="c1"># echo=True indicates that engine should print debugging information</span>
+<span class="c1"># including all sql statements it issues</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s1">&#39;sqlite:///:memory:&#39;</span><span class="p">,</span> <span class="n">echo</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">sqlalchemy</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Engine(sqlite:///:memory:) 1.3.11
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Type-Systems-and-Typing-Rules">Type Systems and Typing Rules<a class="anchor-link" href="#Type-Systems-and-Typing-Rules">&#182;</a></h1><p>We can formalize the cases we describe above as rules for our tool. In a more formal setting, we can think of these rules as typing rules indicating how a type checker should work, or proof rules indicating how a reasoning engine should work.</p>
-<p>The syntax commonly used for such a rule is simple. Every rule consists of a single horizontal line. Above the line, several assumptions can be written, while a single conclusion must be written below it. Such a rule indicates that if the assumptions are met, the conclusion must be valid.</p>
-<p>In the context of a proof rule or a logic rule, the conclusion is a statement that is guaranteed to be true if the assumptions can be shown to be true using the same or other rules in the system. In the context of type systems, such a rule indicates that if the constructs in the assumptions are shown to have the specified types (using rules of the system), then the construct in the statement is shown to have the desired type.</p>
-<p>Here is a simple example in the context of type systems. The expression 'x + y' can be shown to have type number if both x and y are numbers, while it can shown to be of type string if one of them is a string.</p>
+<h1 id="Schema-Declaration-via-SQLAlchemy">Schema Declaration via SQLAlchemy<a class="anchor-link" href="#Schema-Declaration-via-SQLAlchemy">&#182;</a></h1><p>The schema of a database specifies the structure of its tables. This includes the name of all tables, and each column inside them. This includes the name and type of each column (e.g. a number or a date or text), as well as any other properties or conditions of that column (e.g. marking a column as having only unique values).</p>
+<p>Traditionally, a table can be defined in SQL via an insert statement. For example, this statement defines a table of authors, each with an ID a first name and a last name:</p>
+<div class="highlight"><pre><span></span><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">authors</span><span class="p">(</span>
+    <span class="n">id</span> <span class="nb">INTEGER</span> <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="n">AUTOINCREMENT</span><span class="p">,</span>
+    <span class="n">first_name</span> <span class="nb">TEXT</span> <span class="k">NOT</span> <span class="k">NULL</span><span class="p">,</span>
+    <span class="n">last_name</span> <span class="nb">TEXT</span> <span class="k">NOT</span> <span class="k">NULL</span>
+<span class="p">);</span>
+</pre></div>
+<p>Note that while the sytnax of SQL is standardized between all database systems (for most statements). Certain types and 
+features are different or unique to specific database systems. For example, not all systems support AUTOINCREMENT.</p>
+<h2 id="Declarative-Base">Declarative Base<a class="anchor-link" href="#Declarative-Base">&#182;</a></h2><p>We can define tables and schemas through SQLAlchemy via python constructs. Namely, we defined a table by defining a python class. Not every python class we define in an application will be a table. We can mark certain class as tables by inheriting from a special <strong>declarative base</strong> class that SQLAlchemy provides us.</p>
+<p>First, we should create a declarative base via sqlalchemy's API. An application can have several declarative bases to support having several databases. We will go over how a declarative base is implemented in more detail in the next lecture.</p>
 
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="k">import</span> <span class="n">declarative_base</span>
+<span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(x) = number, &nbsp; type(y) = number
-    </span> <br/>
-    type(x + y) = number
-</div> <br> <br> <br>
+<h2 id="Defining-Tables-via-Python-Classes">Defining Tables via Python Classes<a class="anchor-link" href="#Defining-Tables-via-Python-Classes">&#182;</a></h2><p>Now, we can define all the tables we want as Python classes. We only have to <strong>inherit from the declarative base</strong>. These python classes are called <strong>SQLAlchemy modules</strong>.</p>
+<p>Each module contains <em>static</em> attributes specifying the columns, their constraints, and other information about the table it represents. Additionally, since modules are just Python classes, they can also have Python-side attributes and functions. SQLAlchemy can automatically distinguish which are python-side and which are database side, by looking at the attributes and functions types.</p>
+<p>Below, we will use SQLAlchemy declarative API to define several tables representing a library database.</p>
 
-<div style="clear: both; float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(x) = string
-    </span> <br/>
-    type(x + y) = string
-</div><div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(y) = string
-    </span> <br/>
-    type(x + y) = string
 </div>
 </div>
 </div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="k">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">ForeignKey</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.types</span> <span class="k">import</span> <span class="n">Text</span><span class="p">,</span> <span class="n">Boolean</span>
+
+<span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s1">&#39;authors&#39;</span> <span class="c1"># the actual name in the DB</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">first_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">last_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1"># python side</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">first_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1"># python side</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;Author(id=</span><span class="si">{}</span><span class="s2">, name=&#39;</span><span class="si">{}</span><span class="s2">&#39;&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">())</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>The way these rules are defined above is very restrictive and is generally unsufficient to describe interesting type systems. Particularly, it cannot describe any dynamic type system, where variables may have different types in different pieces of the program, or depending on the program execution. For example, a program that sets x to a number if some condition is true, or to a string otherwise.</p>
-<p>This unsufficiency is due to the fact that the type of any variable is set in absolute terms in these rules, not relative to the program execution or the position in the program.</p>
-<p>This unsufficiency is addressed in real type systems by relying on an environemnt or a context: this environment can store information about the program being analyzed (such as the position in the program), but most importantly, can also store the <strong>current</strong> types of constructs in the language.</p>
-<p>We show an example of this below. The example uses formal notations that are the convention when discussing type systems: &Gamma; is the name we give to our current environment, '&lt;variable&gt; : &lt;type&gt;' means that the variable has the given type, &#8866; (read turnstile) means that the environment provided on the left dictates that the expression on the right side is of the given type.</p>
-<p>The first rule is very simple, it indicates that the type of any expression or variable (call it x) is the same type as what the environment indicates it to be (call it t).</p>
-<p>The second rule is more interesting and can be difficult to interpret. Rules of this kind are generally called sequence rules. We want to type a program made out of two statements, the first sets some variable x1 to be some expression exp1, and the second is exp2. If exp1 has type t1, and if exp2 has type t2 when x has type t1, then exp2 in the sequence can be typed to t2.</p>
-<p>The interesting part of this rule is the second assumption above the line. Note that the environemnt in that assumption is extended with associating x1 with type t1. This reflects that the previous statement assigned exp1 to x1, and exp1 is of type t1.</p>
-<p>The last rule is a direct translation of the first rule above using our new formal notation.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>Rule 1: <div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    x: t &isin; &Gamma;
-    </span> <br/>
-    &Gamma; &#8866; x: t
-</div> <br> <br> <br></p>
-<p>Rule 2: <div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    &Gamma; &#8866; exp1: t1, &nbsp; &nbsp; &Gamma; &cup; {x1: t1} &#8866; exp2: t2
-    </span> <br/>
-    &Gamma; &#8866; 'x1 = exp1; exp2': t2
-</div> <br> <br> <br></p>
-<p>Rule 3:</p>
-<div style="clear: both; float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    &Gamma; &#8866; x: number, &nbsp; &nbsp; &Gamma; &#8866; y: number
-    </span> <br/>
-    &Gamma; &#8866; x + y: number
-</div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Null-Safety-Type-System">Null-Safety Type System<a class="anchor-link" href="#Null-Safety-Type-System">&#182;</a></h1><p>Now, we can formally define the cases described above for problem 1, using our new formal notation for typing rules.</p>
-<p>Our rules do not require an environment, this is because we can determine whether a variable or function is protected statically using its name, and because variables and functions are either always protected, or are never protected (they do not change during execution).</p>
-<p>This is intentional on our part when we were desiging the problem. Since we have no need for an environment or context. The implementation you had to for the tool can be simple. It does not need to keep track of some environment table and update it continously as the tool analyzes the program.</p>
-<p>Another benefit is that we can look at statements independently of one another. Since previous statements do not really affect with the current statement is valid or not.</p>
-<p>Our system has two types: nullable which means that the variable or function can be None, null-safe which means that the variable or function are protected, and valid which means that a given statement is valid and does not break null-safety. Any statement that cannot be typed is assumed to be invalid, and should be rejected by the solution.</p>
-<h4> Null-Safe Expressions Rules:</h4>
-We start with the simplest rules in order: variables and functions with names starting with \_n\_ are null-safe, as well as numbers and strings. Note that a null-safe function should also return a null-safe value.
-
-<p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    x starts with _n_
-    </span> <br/>
-    &#8866; x: null-safe
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    f starts with _n_ , &nbsp; &nbsp; &forall; i( &#8866; s_i: valid), &nbsp; &nbsp; &#8866; e: null-safe
-    </span> <br/>
-    &#8866; 'f(param_1,..., param_n): s_1 ... s_n return e': null-safe
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    </span> <br/>
-    &#8866; all integers and strings: null-safe
-</div>
-<div style="clear: both;"></div>
-
-<h4> Nullable Expressions Rules:</h4><p>Next, we define unsafe variables and functions. We do not restrict such functions, they can return anything (or not contain a return statement at all), hence the optional [return e] at the end.</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    x does not start with _n_
-    </span> <br/>
-    &#8866; x: nullable
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &nbsp; &nbsp; &nbsp; f does not start with _n_, &nbsp; &nbsp; &forall; i( &#8866; s_i: valid) &nbsp;
-    </span> <br/>
-    &#8866; 'f(param_1,..., param_n): s_1 ... s_n [return e]' :  nullable
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    </span> <br/>
-    &#8866; None: nullable
-</div>
-<div style="clear: both;"></div><p>Note that the rules that describe function definitions above require that every statement in the function body is valid.</p>
-<h4> Assignments Rules:</h4><p>Now, we can define valid assignments: these include null-safe assignments to protected variables, or any assignment to a nullable variables.</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; x: null-safe, &nbsp; &nbsp; &#8866; e: null-safe
-    </span> <br/>
-    &#8866; 'x = e': valid
-</div><div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; x: nullable
-    </span> <br/>
-    &#8866; 'x = e': valid
-</div>
-<div style="clear: both;"></div><h4> Function Call Rule:</h4>
-So far, our rules cover almost all of our syntax: they include assignments, function definitions, and primitive expressions. However, they do not include function calls yet. We provide the final rule for that below: it requires that any protected parameter in the function definition is passed a null-safe expression in the function call. The rule gives the function call the same type as the function definition (either nullable or null-safe).
-
-<p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; 'f(param_1, ..., param_n): ...': T, &nbsp; &nbsp; &forall; i(&#8866; param_i: null-safe &rarr; &#8866; e_i: null-safe)
-    </span> <br/>
-    &#8866; 'f(e_1, ..., e_n)': T
-</div>
-<div style="clear: both;"></div>
-
-<h4> Program Rule:</h4><p>Finally, we say that a program is valid in our type system, if every statement in it is valid. Note that some statements (like a function call) will have type null-safe or nullable even when valid. So our rule must allow that as well. Another way to phrase this rule is to say that the whole program is typable (i.e. valid) if every statement in it is typable (i.e. has a type).</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &nbsp; &nbsp; &nbsp; &forall; i(&#8866; s_i: T_i) &nbsp; &nbsp; &nbsp; where T_1, ..., T_n &isin; {valid, null-safe, nullable}
-    </span> <br/>
-    &#8866; 's_1 ... s_n': valid
-</div>
-<div style="clear: both;"></div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Example-derivation">Example derivation<a class="anchor-link" href="#Example-derivation">&#182;</a></h2><p>The typing rules defined above can be implemented by an automated tool (similar to your solutions for problem 1), that checks if a given program is valid. It can also be used by hand. If the rules can be applied to <strong>derive</strong> that a given program is valid, then we accept the program to be valid. Otherwise, we say it is invalid.</p>
-<p>Here is one simple example program:</p>
-
-<pre><code>_n_x = 10
-y = None</code></pre>
-<p>We can show that this program is valid as follows:</p>
+<p>Below, we define another table representing books in our library. An interesting attribute of books is that they have an author. In database terms, we have a one-to-many relationship between books and authors. An author can have many book, while a book can have one author (at least in our example).</p>
+<p>We can define this relationship using SQLAlchemy's API in a standard way. First, we define a column that serves as a <strong>foreign key</strong> between the two tables. Second, we define a <strong>logical relationship</strong> between these two tables.</p>
+<p>The logical relationship is a logical connection that SQLAlchemy automatically manages at the Python side. In particular, it provides a simple way to interact with rows in the two tables that are related via the foreign key. More on this later.</p>
+<p>Notice that the definition of the relationship specifies three things:</p>
 <ol>
-<li>First, note that the only rule we can apply to derive the validity of the <strong>entire</strong> program is the last program rule. However, we can only apply it if we show that every statement in the program is valid first.</li>
-<li>The first statement can be shown to be valid using the first assignment rule, since _n_x has type null-safe by the very first rule in our system, and 10 is also null-safe by the third rule.</li>
-<li>The second statement can be shown to be valid by the second assignment rule, since y has type nullable by the first nullable rule.</li>
-<li>Using 2 and 3 as assumptions, we can apply the program rule to show the program is valid.</li>
-</ol>
-<p>We can derive the validity of more complicated programs in the same way, using a bottom-up approach, where we type building blocks of every statement first, then use these types as assumptions to type the statement next, and so on.</p>
-<p>On the other hand, the following program cannot be typed in our system:</p>
-
-<pre><code>_n_x = None</code></pre>
-<p>The only way to type this program will be to use the first assignment rule to show the validity of the statement. However, that rule requires that the assigned expression have type null-safe, but None cannot be assigned type null-safe with any of the rules we have above.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Correctness-/-Soundness">Correctness / Soundness<a class="anchor-link" href="#Correctness-/-Soundness">&#182;</a></h2><p>Type systems such as the one we defined above can be complex, and may contain many rules. It is non-trivial to design such a type system correctly.</p>
-<p>Imagine if we made some mistake in our rules above, that allow us to type 'None' as null-safe. In such a case, our buggy type system will be useless. It will be able to type anything as valid!</p>
-<p>Therefore, type system designers often attempt to formally prove that their type system is correct (the technical word is sound). These proofs are usually long and tedious, but not very deep. Sometimes, automated reasoning tools (such as interactive theorem provers) are used to check these proofs, to ensure that the proofs themselves do not have bugs.</p>
-<p>Generally, such proofs work via induction on the syntax of the language. In other words, it tries to prove the soundness of the type system for <strong>all</strong> combinations of valid programs according to the syntax. The proof starts with simple syntax constructs first (e.g. expressions or assignments), which will constitute the base case in the induction, and move to more complicated constructs afterwards (e.g. a function definition that contains several statements in its body) later, which will constitute the inductive steps.</p>
-<p>Every case in the proof refers back to the formal semantics of the language, to show that every typing rule or derivation is consistent with these semantics.</p>
-<p>Traditionally, soundness of type systems is defined as two properties: type preservation and progress. The first requires that if some expression is assigned some type using the typing rules, then evaluating that expression must yield a value (or a new expression) that retains that type. The second states that expressions that can be typed using the typing rules, and which are not values, can always be evaluated further. This does not guarantee termination (since the evaluation can yield a new expression ad infinity), but does guarantee that the program never gets stuck in some invalid state.</p>
-<p>We omit a formal proof for our null-safe type system above because we do not have such formal semantics.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Further-Reading">Further Reading<a class="anchor-link" href="#Further-Reading">&#182;</a></h1><p>The area of type systems and type theory is very large. If you are interesting, you can look at any of the following resources, ordered by how in-depth they are:</p>
-<ol>
-<li>This wikipedia <a href="https://en.wikipedia.org/wiki/Type_system">article</a> with an overview on types from a practical and theoretical point of view.</li>
-<li>This wikipedia <a href="https://en.wikipedia.org/wiki/Comparison_of_programming_languages_by_type_system">article</a> comparing type systems of popular programming language.</li>
-<li>Andrew Myers lecture notes on the <a href="http://www.cs.cornell.edu/courses/cs6110/2013sp/lectures/lec25-sp13.pdf">simply typed lambda calculus</a>.</li>
-<li>The standard reference: Benjamin Pierce's Book on <a href="http://ropas.snu.ac.kr/~kwang/520/pierce_book.pdf">Type Systems for Programming Languages</a>.</li>
+<li>The sqlalchemy module's name: This is specified as a string because the module may not have been defined yet at this point, and to support tables defined outside via the alternative classical mapping feature of SQLAlchemy, which defines tables without defining python classes.</li>
+<li>The foreign keys: SQLAlchemy can deduce this automatically when only one foreign key exists between the two tables.</li>
+<li>The backref name: this directs SQLAlchemy to define a back-reference relationship in the Author module, this is a useful shortcut to avoid having to define both ends of the relationship in both modules explicitly.</li>
 </ol>
 
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="k">import</span> <span class="n">relationship</span>
+
+<span class="k">class</span> <span class="nc">Book</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s1">&#39;books&#39;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">75</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">synopsis</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">author_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="n">Author</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Author&quot;</span><span class="p">,</span> <span class="n">foreign_keys</span><span class="o">=</span><span class="p">[</span><span class="n">author_id</span><span class="p">],</span> <span class="n">backref</span><span class="o">=</span><span class="s2">&quot;books&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;Book(id=</span><span class="si">{}</span><span class="s2">, title=&#39;</span><span class="si">{}</span><span class="s2">&#39;, author=&#39;</span><span class="si">{}</span><span class="s2">&#39;, has_synopsis=</span><span class="si">{}</span><span class="s2">)&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">author</span><span class="o">.</span><span class="n">get_name</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">synopsis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Finally, we define a module for countries. We also specify a relationship between countries and authors. However, this is a many to many relationship. An author may have several nationalities, and a country can have many authors.</p>
+<p>Traditionally, many-to-many relationships are defined via an association table, that lists related entries in both tables. We define this association table via the CountryAuthor module below.</p>
+<p>We define the relationship inside the Country module. Note that we pass the name of the association module via the secondary parameter. This tells sqlalchemy that this is a many-to-many relation.</p>
+<p>Notice that in the association module we only define foreign keys but no relations. This is only a matter of convinience. In our code, we only need to use the relationship via objects of countries and authors and never the association table.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="k">import</span> <span class="n">UniqueConstraint</span>
+
+<span class="k">class</span> <span class="nc">Country</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s1">&#39;country&#39;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="n">authors</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Author&quot;</span><span class="p">,</span>
+                           <span class="n">secondary</span><span class="o">=</span><span class="s2">&quot;country_author&quot;</span><span class="p">,</span>
+                           <span class="n">backref</span><span class="o">=</span><span class="s2">&quot;countries&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;Country(id=</span><span class="si">{}</span><span class="s2">, name=</span><span class="si">{}</span><span class="s2">, code=</span><span class="si">{}</span><span class="s2">)&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                                           <span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">CountryAuthor</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s1">&#39;country_author&#39;</span>
+    
+    <span class="n">author_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="n">Author</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">country_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="n">Country</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">native</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Boolean</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="c1">#author = relationship(&quot;Author&quot;)</span>
+    <span class="c1">#country = relationship(&quot;Country&quot;)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;CountryAuthor(author_id=</span><span class="si">{}</span><span class="s2">, country_id=</span><span class="si">{}</span><span class="s2">, native=</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">author_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">country_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">native</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Creating-the-Tables">Creating the Tables<a class="anchor-link" href="#Creating-the-Tables">&#182;</a></h2><p>Note that we have only defined python classes so far. The database itself has not been modified yet, and no "physical" tables were created. We can tell SQLAlchemy to create the tables for us via the declarative base. When creating the tables, we must specify a corresponding engine, which will be used to generate and issue the corresponding SQL commands.</p>
+<p>Note how this call generates many SQL statements, corresponding to each of the modules we defined above.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-14 00:20:03,948 INFO sqlalchemy.engine.base.Engine SELECT CAST(&#39;test plain returns&#39; AS VARCHAR(60)) AS anon_1
+2019-11-14 00:20:03,950 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,953 INFO sqlalchemy.engine.base.Engine SELECT CAST(&#39;test unicode returns&#39; AS VARCHAR(60)) AS anon_1
+2019-11-14 00:20:03,957 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,960 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;country&#34;)
+2019-11-14 00:20:03,964 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,967 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;country&#34;)
+2019-11-14 00:20:03,970 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,972 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;books&#34;)
+2019-11-14 00:20:03,975 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,976 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;books&#34;)
+2019-11-14 00:20:03,979 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,980 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;authors&#34;)
+2019-11-14 00:20:03,982 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,983 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;authors&#34;)
+2019-11-14 00:20:03,985 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,986 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;country_author&#34;)
+2019-11-14 00:20:03,988 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,989 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;country_author&#34;)
+2019-11-14 00:20:03,990 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,992 INFO sqlalchemy.engine.base.Engine 
+CREATE TABLE country (
+	id INTEGER NOT NULL, 
+	name VARCHAR NOT NULL, 
+	code VARCHAR(3) NOT NULL, 
+	PRIMARY KEY (id), 
+	UNIQUE (name), 
+	UNIQUE (code)
+)
+
+
+2019-11-14 00:20:03,993 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,994 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-14 00:20:03,995 INFO sqlalchemy.engine.base.Engine 
+CREATE TABLE authors (
+	id INTEGER NOT NULL, 
+	first_name VARCHAR NOT NULL, 
+	last_name VARCHAR NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+
+2019-11-14 00:20:03,996 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:03,998 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-14 00:20:03,999 INFO sqlalchemy.engine.base.Engine 
+CREATE TABLE books (
+	id INTEGER NOT NULL, 
+	title VARCHAR(75) NOT NULL, 
+	synopsis TEXT, 
+	author_id INTEGER NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(author_id) REFERENCES authors (id)
+)
+
+
+2019-11-14 00:20:03,999 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:04,000 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-14 00:20:04,001 INFO sqlalchemy.engine.base.Engine 
+CREATE TABLE country_author (
+	author_id INTEGER NOT NULL, 
+	country_id INTEGER NOT NULL, 
+	native BOOLEAN NOT NULL, 
+	PRIMARY KEY (author_id, country_id), 
+	FOREIGN KEY(author_id) REFERENCES authors (id), 
+	FOREIGN KEY(country_id) REFERENCES country (id), 
+	CHECK (native IN (0, 1))
+)
+
+
+2019-11-14 00:20:04,002 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:04,003 INFO sqlalchemy.engine.base.Engine COMMIT
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Data-Manipulation">Data Manipulation<a class="anchor-link" href="#Data-Manipulation">&#182;</a></h1><p>Now that we have our tables defined. It is time to add some data to them.</p>
+<p>SQLAlchemy supports data manipulation via regular python manipulation of objects. This includes inserting, updating, and deleting of data.</p>
+<h2 id="Session-and-Transactions">Session and Transactions<a class="anchor-link" href="#Session-and-Transactions">&#182;</a></h2><p>SQLAlchemy supports transactions in the ACID model. A transaction consists of several commands, which may include data manipulation, queries, and even schema manipulation. A transaction is initiated before all of its commands, and is then populated with commands one at a time. A transaction can be committed, at which point its commands are committed to the database. Transactions can also be rolled back (e.g. in the case of errors), at which point their effects are undone.</p>
+<p>ACID stands for:</p>
+<ol>
+<li>Atomicity: Each transaction is atomic. Either all of its commands are committed, or all of them fail.</li>
+<li>Consistency: If a transaction is committed, then all of it commands are consistent with the database constraints (e.g. it never sets the value of a column to null if the column is not allowed to be null).</li>
+<li>Isolation: changes made by a transaction do not affect other concurrent transaction, unless that transaction was committed, or the changes were asked to be flushed explicitly.</li>
+<li>Durable: committed transaction are indeed committed in the database physically, and they will survive future errors or crashes.</li>
+</ol>
+<p>A transaction in SQLAlchemy is implemented as part of the session abstraction. A session is an SQLAlchemy object that can be populated with commands and manipulation. The sessions provides a <strong>commit</strong> and <strong>rollback</strong> functions that can be used to manipulate the underlying transaction.</p>
+<p>Additionally, the session provides a <strong>flush</strong> function, which can be used to flush the changes made so far to the database, so that their effects are visible to other transactions and queries. Even if some commands are flushed successfully, future commands in the same transaction may cause errors, which will cause the entire transaction to rollback, including the flushed commands. This is not the case for <strong>committed</strong> commands, which will never get rolled back.</p>
+<p>Sessions are created via a session maker. A session maker can be configured initially by providing an engine, and then used to create new sessions. This is shown below. Note that this is a simple <a href="https://en.wikipedia.org/wiki/Factory_method_pattern">factory pattern</a>.</p>
+<p>Note that SQLAlchemy supports several optional parameters that can be provided at the SessionMaker or the session level. Most noteably autoflush and autocommit, which default to True and False respectively, which specify whether any given command is immediately flushed or committed. A session with autocommit=False can be committed explicitly by calling .commit().</p>
+<p>The transaction/session API of SQLAlchemy is very extensive, and include a variety of configurable parameters, as well as support for manual management of transactions, subtransactions, and other customizable behavior. For more details, look at the <a href="https://docs.sqlalchemy.org/en/13/orm/session_api.html">sqlalchemy session docs</a>.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="k">import</span> <span class="n">sessionmaker</span>
+<span class="n">SessionMaker</span> <span class="o">=</span> <span class="n">sessionmaker</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+<span class="c1"># SessionMaker can now give us sessions</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Inserting-Elements">Inserting Elements<a class="anchor-link" href="#Inserting-Elements">&#182;</a></h2><p>Now that we have the ability to create sessions. We can start inserting rows into our database. This is done via three steps, the last of which may be implicit:</p>
+<ol>
+<li>A new instance object of the module representing the desired table is created. The object can be provided all the content data via its constructors (which is inherited from the declartive base), or by manipulating its attributes explicitly.</li>
+<li>The new instances are added to a session/transaction. This does not commit them to the database directly (unless autocommit=True). However, it may flush them to the database if autoflush=True.</li>
+<li>The session is committed via .commit() or implicitly when autocommit=true.</li>
+</ol>
+<p>Below, we create a new author and country object. We also indicate that they are related by manipulating their logical relation.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Create session</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">(</span><span class="n">autoflush</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># Create new objects</span>
+<span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="p">(</span><span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;J. K.&#39;</span><span class="p">,</span> <span class="n">last_name</span><span class="o">=</span><span class="s1">&#39;Rowling&#39;</span><span class="p">)</span>
+<span class="n">country</span> <span class="o">=</span> <span class="n">Country</span><span class="p">()</span>
+<span class="n">country</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;United Kingdom&#39;</span>
+<span class="n">country</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="s1">&#39;UK&#39;</span>
+
+<span class="c1"># Add objects to session</span>
+<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">author</span><span class="p">)</span>
+<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">country</span><span class="p">)</span>
+
+<span class="c1"># Notice that the objects are not inserted to the database</span>
+<span class="c1"># but they are marked as new by the session</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">new</span><span class="p">)</span>
+
+<span class="c1"># Country.authors is a many-to-many relation we defined above</span>
+<span class="c1"># also Author.countries is its backref relation</span>
+<span class="c1"># because it is many-to-many, both directions of the relation are lists.</span>
+<span class="n">author</span><span class="o">.</span><span class="n">countries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">country</span><span class="p">)</span>
+<span class="c1">#country.authors.append(author) # this is also fine</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>IdentitySet([&lt;Author(id=None, name=&#39;J. K. Rowling&#39;&gt;, &lt;Country(id=None, name=United Kingdom, code=UK)&gt;])
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># We can commit the session</span>
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-14 00:20:04,190 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,194 INFO sqlalchemy.engine.base.Engine INSERT INTO authors (first_name, last_name) VALUES (?, ?)
+2019-11-14 00:20:04,197 INFO sqlalchemy.engine.base.Engine (&#39;J. K.&#39;, &#39;Rowling&#39;)
+2019-11-14 00:20:04,203 INFO sqlalchemy.engine.base.Engine INSERT INTO country (name, code) VALUES (?, ?)
+2019-11-14 00:20:04,206 INFO sqlalchemy.engine.base.Engine (&#39;United Kingdom&#39;, &#39;UK&#39;)
+2019-11-14 00:20:04,210 INFO sqlalchemy.engine.base.Engine INSERT INTO country_author (author_id, country_id, native) VALUES (?, ?, ?)
+2019-11-14 00:20:04,212 INFO sqlalchemy.engine.base.Engine (1, 1, 1)
+2019-11-14 00:20:04,218 INFO sqlalchemy.engine.base.Engine COMMIT
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Rollbacks">Rollbacks<a class="anchor-link" href="#Rollbacks">&#182;</a></h2><p>The previous transaction was successfully committed. It does not violate any constraints set by our database.</p>
+<p>The following transaction will fail. In particular, because we are inserting a new country with the same code as the UK, which violates the uniqueness constraint defined in the Country module above.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+
+<span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="p">(</span><span class="n">first_name</span><span class="o">=</span><span class="s1">&#39;Other&#39;</span><span class="p">,</span> <span class="n">last_name</span><span class="o">=</span><span class="s1">&#39;Author&#39;</span><span class="p">)</span>
+<span class="n">country</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Other Country&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;UK&#39;</span><span class="p">)</span>
+
+<span class="n">session</span><span class="o">.</span><span class="n">add_all</span><span class="p">([</span><span class="n">author</span><span class="p">,</span> <span class="n">country</span><span class="p">])</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+    <span class="c1"># session.rollback() # the transaction is automatically rolledback</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-14 00:20:04,336 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,338 INFO sqlalchemy.engine.base.Engine INSERT INTO authors (first_name, last_name) VALUES (?, ?)
+2019-11-14 00:20:04,339 INFO sqlalchemy.engine.base.Engine (&#39;Other&#39;, &#39;Author&#39;)
+2019-11-14 00:20:04,343 INFO sqlalchemy.engine.base.Engine INSERT INTO country (name, code) VALUES (?, ?)
+2019-11-14 00:20:04,344 INFO sqlalchemy.engine.base.Engine (&#39;Other Country&#39;, &#39;UK&#39;)
+2019-11-14 00:20:04,345 INFO sqlalchemy.engine.base.Engine ROLLBACK
+
+(sqlite3.IntegrityError) UNIQUE constraint failed: country.code
+[SQL: INSERT INTO country (name, code) VALUES (?, ?)]
+[parameters: (&#39;Other Country&#39;, &#39;UK&#39;)]
+(Background on this error at: http://sqlalche.me/e/gkpj)
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Data-Query">Data Query<a class="anchor-link" href="#Data-Query">&#182;</a></h1><p>SQLAlchemy supports querying tables via its <a href="https://docs.sqlalchemy.org/en/13/orm/query.html">Query API</a> and Query objects. The Query API includes all standard SQL query constructs, including filter, group by, order, and others. It also supports eager and lazy joins (more on that later), as well as a variety of aggregators.</p>
+<p>The query API constructs are used in the python side and then transformed into SQL statements that get executed at the database side. This is important for efficiency. One can achieve a similar functionality to a filter query by retrieving all the rows, and performing the filter in python via a for-loop and an if statement. However, this will be much slower:</p>
+<ol>
+<li>It will transfer all the data from the database to python, this is particular slow if the database is remote and requires network access.</li>
+<li>It will execute the filter in python, which is a slow interpreted language, as opposed to compiled and optimized binaries of the database system (usually C/C++).</li>
+<li>Database systems are optimized to perform many filters quickly, via index and caches and other techniques.</li>
+</ol>
+<p>Queries are lazy. Creating a query does not immediately execute it. This is because a query can be modified after creation several times (e.g. by calling the filter function). The query is executed when the developer indicate that it has been finalized, by calling .all(), .first(), .get(), or certain final aggregators such as .count()</p>
+<p>Query results can be a python object (instances of queries modules) or a list containing such objects, depending on whether get/first or all was used.</p>
+<p>These objects contain the data in the corresponding rows inside their attributes. This includes other rows that are related to them via a relation. These attributes and rows can be accessed directly by accessing the properites of the python objects.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># create new session</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+
+<span class="c1"># Get the country corresponding to country code &#39;uk&#39;</span>
+<span class="n">query1</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span>
+<span class="n">query1</span> <span class="o">=</span> <span class="n">query1</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Country</span><span class="o">.</span><span class="n">code</span><span class="o">==</span><span class="s1">&#39;UK&#39;</span><span class="p">)</span>
+<span class="n">query2</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Author</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;queries created but not executed yet!</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="n">uk</span> <span class="o">=</span> <span class="n">query1</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+<span class="n">all_authors</span> <span class="o">=</span> <span class="n">query2</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">queries executed!&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">all_authors</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">uk</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>queries created but not executed yet!
+
+2019-11-14 00:20:04,445 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,448 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country 
+WHERE country.code = ?
+ LIMIT ? OFFSET ?
+2019-11-14 00:20:04,450 INFO sqlalchemy.engine.base.Engine (&#39;UK&#39;, 1, 0)
+2019-11-14 00:20:04,456 INFO sqlalchemy.engine.base.Engine SELECT authors.id AS authors_id, authors.first_name AS authors_first_name, authors.last_name AS authors_last_name 
+FROM authors
+2019-11-14 00:20:04,457 INFO sqlalchemy.engine.base.Engine ()
+
+queries executed!
+[&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
+&lt;Country(id=1, name=United Kingdom, code=UK)&gt;
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Lazy-vs-Eager-Joins">Lazy vs Eager Joins<a class="anchor-link" href="#Lazy-vs-Eager-Joins">&#182;</a></h2><p>By default, relations are lazy. A query retrieves the data of the queried rows only. The data of other rows that are related is retrieved on demand, when that relationship is accessed.</p>
+<p>For example, below we can see that plain attributes of the row corresponding to the UK are immediately available. However, accessing the authors relationship issues an SQL query that fetches it on-demand, before returning the entries of that relationship.</p>
+<p>Note that future use of the relationship do not cause other SQL queries, since the relationship content gets cached after the first use.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[12]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;plain attributes are available&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;name = &#39;</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;code = &#39;</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Relationship are lazy, below you will see the SQL query performing the join</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">authors = &#39;</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">authors</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Relationship is cached after first use&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;authors = &#39;</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">authors</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>plain attributes are available
+name =  United Kingdom
+code =  UK
+
+Relationship are lazy, below you will see the SQL query performing the join
+
+2019-11-14 00:20:04,604 INFO sqlalchemy.engine.base.Engine SELECT authors.id AS authors_id, authors.first_name AS authors_first_name, authors.last_name AS authors_last_name 
+FROM authors, country_author 
+WHERE ? = country_author.country_id AND authors.id = country_author.author_id
+2019-11-14 00:20:04,605 INFO sqlalchemy.engine.base.Engine (1,)
+
+authors =  [&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
+
+Relationship is cached after first use
+authors =  [&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>When the query is defined, it can be configured to load certain relations eagerly as part of the initial SQL query. The join strategy (lazy or eager) can also be specified in the relationship definition at the module, which sets the default behavior for that relation.</p>
+<p>Eager loading is good for cases when we know that the relation will be accessed on many of the resulting objects. Since that will allow us to perform a single SQL query only, instead of several ones. Otherwise, lazy join is recommended.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[13]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="k">import</span> <span class="n">joinedload</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The following query will have a join in it eagerly&#39;</span><span class="p">)</span>
+<span class="n">uk</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">options</span><span class="p">(</span><span class="n">joinedload</span><span class="p">(</span><span class="n">Country</span><span class="o">.</span><span class="n">authors</span><span class="p">))</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Country</span><span class="o">.</span><span class="n">code</span><span class="o">==</span><span class="s1">&#39;UK&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Now authors will be ready immediately&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">uk</span><span class="p">,</span> <span class="n">uk</span><span class="o">.</span><span class="n">authors</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>The following query will have a join in it eagerly
+2019-11-14 00:20:04,708 INFO sqlalchemy.engine.base.Engine SELECT anon_1.country_id AS anon_1_country_id, anon_1.country_name AS anon_1_country_name, anon_1.country_code AS anon_1_country_code, authors_1.id AS authors_1_id, authors_1.first_name AS authors_1_first_name, authors_1.last_name AS authors_1_last_name 
+FROM (SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country 
+WHERE country.code = ?
+ LIMIT ? OFFSET ?) AS anon_1 LEFT OUTER JOIN (country_author AS country_author_1 JOIN authors AS authors_1 ON authors_1.id = country_author_1.author_id) ON anon_1.country_id = country_author_1.country_id
+2019-11-14 00:20:04,709 INFO sqlalchemy.engine.base.Engine (&#39;UK&#39;, 1, 0)
+
+Now authors will be ready immediately
+&lt;Country(id=1, name=United Kingdom, code=UK)&gt; [&lt;Author(id=1, name=&#39;J. K. Rowling&#39;&gt;]
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Transactions-and-Queries">Transactions and Queries<a class="anchor-link" href="#Transactions-and-Queries">&#182;</a></h2><p>A transaction may include some data manipulation as well as queries. Additionally, there may be concurrent transactions performing queries as well.</p>
+<p>This raises a question of isolation. Should the effect of a pending (a transaction that has not been committed yet) be visible to queries made in that transaction, or other concurrent transactions?</p>
+<p>SQLAlchemy manages the isolation via flushes. All non-flushed changes are not visible to queries of any transaction. Changes that are flushed successfuly, are visible to other transaction. However, they may get rolled back if their issuing transaction fails. Remember, sessions autoflush changes by default.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session1</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">(</span><span class="n">autoflush</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">session2</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">(</span><span class="n">autoflush</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">country</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;United States&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;US&#39;</span><span class="p">)</span>
+<span class="n">session1</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">country</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;US was added to session 1, but not flushed&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;US will not be visibile in either sessions!</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">countries1</span> <span class="o">=</span> <span class="n">session1</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="n">countries2</span> <span class="o">=</span> <span class="n">session2</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">session1 --&gt;&#39;</span><span class="p">,</span> <span class="n">countries1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;session2 --&gt;&#39;</span><span class="p">,</span> <span class="n">countries2</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Flush issued! (notice there is no COMMIT below)&#39;</span><span class="p">)</span>
+<span class="n">session1</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">US is flushed, now it will become visible!</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">countries1</span> <span class="o">=</span> <span class="n">session1</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="n">countries2</span> <span class="o">=</span> <span class="n">session2</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">session1 --&gt;&#39;</span><span class="p">,</span> <span class="n">countries1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;session2 --&gt;&#39;</span><span class="p">,</span> <span class="n">countries2</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Commit session 1&#39;</span><span class="p">)</span>
+<span class="n">session1</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>US was added to session 1, but not flushed
+US will not be visibile in either sessions!
+
+2019-11-14 00:20:04,793 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,794 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country
+2019-11-14 00:20:04,795 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:04,797 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,798 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country
+2019-11-14 00:20:04,798 INFO sqlalchemy.engine.base.Engine ()
+
+session1 --&gt; [&lt;Country(id=1, name=United Kingdom, code=UK)&gt;]
+session2 --&gt; [&lt;Country(id=1, name=United Kingdom, code=UK)&gt;] 
+
+Flush issued! (notice there is no COMMIT below)
+2019-11-14 00:20:04,801 INFO sqlalchemy.engine.base.Engine INSERT INTO country (name, code) VALUES (?, ?)
+2019-11-14 00:20:04,802 INFO sqlalchemy.engine.base.Engine (&#39;United States&#39;, &#39;US&#39;)
+
+US is flushed, now it will become visible!
+
+2019-11-14 00:20:04,805 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country
+2019-11-14 00:20:04,805 INFO sqlalchemy.engine.base.Engine ()
+2019-11-14 00:20:04,808 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country
+2019-11-14 00:20:04,809 INFO sqlalchemy.engine.base.Engine ()
+
+session1 --&gt; [&lt;Country(id=1, name=United Kingdom, code=UK)&gt;, &lt;Country(id=2, name=United States, code=US)&gt;]
+session2 --&gt; [&lt;Country(id=1, name=United Kingdom, code=UK)&gt;, &lt;Country(id=2, name=United States, code=US)&gt;] 
+
+Commit session 1
+2019-11-14 00:20:04,811 INFO sqlalchemy.engine.base.Engine COMMIT
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Updating-a-Row">Updating a Row<a class="anchor-link" href="#Updating-a-Row">&#182;</a></h2><p>After an object has been retrieved via a query, its data can be modified via regular python assignments to its attributes. This does not issue the update to the database yet. Instead, the update object must be added to a session, and that session has to be committed (explicitly or implicitly) for the update to get committed to the database.</p>
+<p>The session can also be flushed, to make the update visible without committing it.</p>
+<p>Update objects are marked by the session as "dirty".</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+
+<span class="c1"># get the country with primary key (in this case id) = 2</span>
+<span class="n">usa</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Country</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># print usa to the screen</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">usa</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+<span class="c1"># update its name</span>
+<span class="n">usa</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;United State of America&#39;</span>
+<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">usa</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;new = &#39;</span><span class="p">,</span> <span class="n">session</span><span class="o">.</span><span class="n">new</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;dirty = &#39;</span><span class="p">,</span> <span class="n">session</span><span class="o">.</span><span class="n">dirty</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="c1"># commit</span>
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-14 00:20:04,954 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:04,957 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country 
+WHERE country.id = ?
+2019-11-14 00:20:04,959 INFO sqlalchemy.engine.base.Engine (2,)
+
+&lt;Country(id=2, name=United States, code=US)&gt;
+
+new =  IdentitySet([])
+dirty =  IdentitySet([&lt;Country(id=2, name=United State of America, code=US)&gt;]) 
+
+2019-11-14 00:20:04,971 INFO sqlalchemy.engine.base.Engine UPDATE country SET name=? WHERE country.id = ?
+2019-11-14 00:20:04,973 INFO sqlalchemy.engine.base.Engine (&#39;United State of America&#39;, 2)
+2019-11-14 00:20:04,976 INFO sqlalchemy.engine.base.Engine COMMIT
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Relations can also be updated similarly. One-to-many relations are updated via updating an existing object relation. Many-to-Many relations may be updated via creating a new instance of the secondary/association module, or via the relation directly.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Make J. K. Rowling american! (just cause I can)</span>
+<span class="n">rowling</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Author</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+<span class="n">rowling</span><span class="o">.</span><span class="n">countries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">usa</span><span class="p">)</span>
+
+<span class="c1"># Alternative way: this allows setting data on the association object</span>
+<span class="c1"># rowling_usa = CountryAuthor(author_id=rowling.id, country_id=usa.id, native=False)</span>
+<span class="c1"># session.add(rowling_usa)</span>
+
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-14 00:20:05,068 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-14 00:20:05,069 INFO sqlalchemy.engine.base.Engine SELECT authors.id AS authors_id, authors.first_name AS authors_first_name, authors.last_name AS authors_last_name 
+FROM authors
+ LIMIT ? OFFSET ?
+2019-11-14 00:20:05,069 INFO sqlalchemy.engine.base.Engine (1, 0)
+2019-11-14 00:20:05,071 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country, country_author 
+WHERE ? = country_author.author_id AND country.id = country_author.country_id
+2019-11-14 00:20:05,071 INFO sqlalchemy.engine.base.Engine (1,)
+2019-11-14 00:20:05,073 INFO sqlalchemy.engine.base.Engine SELECT country.id AS country_id, country.name AS country_name, country.code AS country_code 
+FROM country 
+WHERE country.id = ?
+2019-11-14 00:20:05,074 INFO sqlalchemy.engine.base.Engine (2,)
+2019-11-14 00:20:05,074 INFO sqlalchemy.engine.base.Engine INSERT INTO country_author (author_id, country_id, native) VALUES (?, ?, ?)
+2019-11-14 00:20:05,075 INFO sqlalchemy.engine.base.Engine (1, 2, 1)
+2019-11-14 00:20:05,076 INFO sqlalchemy.engine.base.Engine COMMIT
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
 </div>
     </div>
   </div>

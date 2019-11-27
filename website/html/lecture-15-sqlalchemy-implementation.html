@@ -2,7 +2,7 @@
 <html>
 <head><meta charset="utf-8" />
 
-<title>lecture-12-type-systems</title>
+<title>lecture-15-sqlalchemy-implementation</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
@@ -13077,261 +13077,1186 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Lecture-12---Null-Safe-Variables-and-Type-Systems">Lecture 12 - Null-Safe Variables and Type Systems<a class="anchor-link" href="#Lecture-12---Null-Safe-Variables-and-Type-Systems">&#182;</a></h1>
+<h1 id="Overview">Overview<a class="anchor-link" href="#Overview">&#182;</a></h1><p>These notes are a continuation of the previous set of notes. We will go through some more advanced usage of SQLAlchemy, including mass insertion, and advanced query features. We will then look under the hood for some details on how SQLAlchemy's features are implemented, using interesting programming and embedding techniques.</p>
+<h1 id="Music-Library-Example">Music Library Example<a class="anchor-link" href="#Music-Library-Example">&#182;</a></h1><p>Our running example will be a database made out of Artists and Albums. We define the schema below.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="k">import</span> <span class="n">create_engine</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">ForeignKey</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="k">import</span> <span class="n">declarative_base</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="k">import</span> <span class="n">validates</span><span class="p">,</span> <span class="n">relationship</span>
+
+<span class="kn">import</span> <span class="nn">math</span>
+
+<span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s1">&#39;sqlite:///:memory:&#39;</span><span class="p">,</span> <span class="n">echo</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">Artist</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s1">&#39;artists&#39;</span> <span class="c1"># the actual name in the DB</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">year</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="nd">@validates</span><span class="p">(</span><span class="s1">&#39;year&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">year_is_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">year</span><span class="p">):</span>
+        <span class="n">year</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">year</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">year</span> <span class="o">&lt;</span> <span class="mi">1950</span> <span class="ow">or</span> <span class="n">year</span> <span class="o">&gt;</span> <span class="mi">2019</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Illegal year!&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">year</span>
+    
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1"># python side</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;Artist(id=</span><span class="si">{}</span><span class="s2">, name=&#39;</span><span class="si">{}</span><span class="s2">&#39;, year=</span><span class="si">{}</span><span class="s2">&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">Album</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s1">&#39;albums&#39;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">tracks</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">artist_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="n">Artist</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">artist</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s1">&#39;Artist&#39;</span><span class="p">,</span> <span class="n">backref</span><span class="o">=</span><span class="s1">&#39;albums&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="s1">&#39;joined&#39;</span><span class="p">)</span> <span class="c1"># backref is still lazy</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;Album(id=</span><span class="si">{}</span><span class="s2">, name=</span><span class="si">{}</span><span class="s2">, #tracks=</span><span class="si">{}</span><span class="s2">, artist=</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">artist</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+<span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-15 00:34:18,337 INFO sqlalchemy.engine.base.Engine SELECT CAST(&#39;test plain returns&#39; AS VARCHAR(60)) AS anon_1
+2019-11-15 00:34:18,337 INFO sqlalchemy.engine.base.Engine ()
+2019-11-15 00:34:18,338 INFO sqlalchemy.engine.base.Engine SELECT CAST(&#39;test unicode returns&#39; AS VARCHAR(60)) AS anon_1
+2019-11-15 00:34:18,338 INFO sqlalchemy.engine.base.Engine ()
+2019-11-15 00:34:18,339 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;albums&#34;)
+2019-11-15 00:34:18,339 INFO sqlalchemy.engine.base.Engine ()
+2019-11-15 00:34:18,340 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;albums&#34;)
+2019-11-15 00:34:18,340 INFO sqlalchemy.engine.base.Engine ()
+2019-11-15 00:34:18,341 INFO sqlalchemy.engine.base.Engine PRAGMA main.table_info(&#34;artists&#34;)
+2019-11-15 00:34:18,341 INFO sqlalchemy.engine.base.Engine ()
+2019-11-15 00:34:18,341 INFO sqlalchemy.engine.base.Engine PRAGMA temp.table_info(&#34;artists&#34;)
+2019-11-15 00:34:18,342 INFO sqlalchemy.engine.base.Engine ()
+2019-11-15 00:34:18,342 INFO sqlalchemy.engine.base.Engine 
+CREATE TABLE artists (
+	id INTEGER NOT NULL, 
+	name VARCHAR NOT NULL, 
+	year INTEGER, 
+	PRIMARY KEY (id), 
+	UNIQUE (name)
+)
+
+
+2019-11-15 00:34:18,343 INFO sqlalchemy.engine.base.Engine ()
+2019-11-15 00:34:18,344 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,345 INFO sqlalchemy.engine.base.Engine 
+CREATE TABLE albums (
+	id INTEGER NOT NULL, 
+	name VARCHAR NOT NULL, 
+	tracks INTEGER NOT NULL, 
+	artist_id INTEGER NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(artist_id) REFERENCES artists (id)
+)
+
+
+2019-11-15 00:34:18,345 INFO sqlalchemy.engine.base.Engine ()
+2019-11-15 00:34:18,345 INFO sqlalchemy.engine.base.Engine COMMIT
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Inserting-Data">Inserting Data<a class="anchor-link" href="#Inserting-Data">&#182;</a></h2><p>Now, we will insert data into our database. A common technique is to read data from a csv or JSON file and insert it into DB. Sometimes, or to scrape data online or acquire it from other databases. Here, we will start with some JSON dump of the data.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">json_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;[</span>
+<span class="s1">    {&quot;type&quot;: &quot;artist&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Lynyrd Skynyrd&quot;, &quot;year&quot;: 1964}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;artist&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Led Zeppelin&quot;, &quot;year&quot;: 1968}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;artist&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Metallica&quot;, &quot;year&quot;: 1981}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;artist&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Slayer&quot;, &quot;year&quot;: 1981}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;artist&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Pantera&quot;, &quot;year&quot;: 1981}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;artist&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Pearl Jam&quot;}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;artist&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Tool&quot;, &quot;year&quot;: 1990}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;album&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Master of Puppets&quot;, &quot;artist&quot;: &quot;Metallica&quot;, &quot;tracks&quot;: 8}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;album&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;...And Justice for All&quot;, &quot;artist&quot;: &quot;Metallica&quot;, &quot;tracks&quot;: 9}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;album&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Fear Inoculumn&quot;, &quot;artist&quot;: &quot;Tool&quot;, &quot;tracks&quot;: 10}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;album&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Seasons in the Abyss&quot;, &quot;artist&quot;: &quot;Slayer&quot;, &quot;tracks&quot;: 10}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;album&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Hell Awaits&quot;, &quot;artist&quot;: &quot;Slayer&quot;, &quot;tracks&quot;: 7}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;album&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Far Beyond Driven&quot;, &quot;artist&quot;: &quot;Pantera&quot;}},</span>
+<span class="s1">    {&quot;type&quot;: &quot;album&quot;, &quot;content&quot;: {&quot;name&quot;: &quot;Ten&quot;, &quot;artist&quot;: &quot;Pearl Jam&quot;}}</span>
+<span class="s1">]&#39;&#39;&#39;</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Our JSON data contains many artists and bands. However, our data is not clean. Some artists are missing their year of formation, some albums may be missing the number of tracks. If an artist fails to be inserted, we want all its albums not to be inserted. However, if an album fails, this should not affect other albums or the artist.</p>
+<p>We can achieve this via committing every entry independently, starting with bands first. More complicated conditions can be implemented using subtransactions.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="k">import</span> <span class="n">sessionmaker</span>
+<span class="n">SessionMaker</span> <span class="o">=</span> <span class="n">sessionmaker</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+<span class="n">artists</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;artist&#39;</span><span class="p">:</span>
+        <span class="n">artist</span> <span class="o">=</span> <span class="n">Artist</span><span class="p">(</span><span class="o">**</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;content&#39;</span><span class="p">])</span>
+        <span class="n">artists</span><span class="p">[</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;content&#39;</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">artist</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">artist</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            
+            <span class="k">del</span> <span class="n">artists</span><span class="p">[</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;content&#39;</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]]</span>
+            <span class="n">session</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;album&#39;</span><span class="p">:</span>
+        <span class="n">artist</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;content&#39;</span><span class="p">][</span><span class="s1">&#39;artist&#39;</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;content&#39;</span><span class="p">][</span><span class="s1">&#39;artist&#39;</span><span class="p">]</span>
+        
+        <span class="n">album</span> <span class="o">=</span> <span class="n">Album</span><span class="p">(</span><span class="o">**</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;content&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">artist</span> <span class="ow">in</span> <span class="n">artists</span><span class="p">:</span>
+            <span class="n">album</span><span class="o">.</span><span class="n">artist</span> <span class="o">=</span> <span class="n">artists</span><span class="p">[</span><span class="n">artist</span><span class="p">]</span>
+            <span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">album</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">rollback</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Artist</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Album</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-15 00:34:18,566 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,569 INFO sqlalchemy.engine.base.Engine INSERT INTO artists (name, year) VALUES (?, ?)
+2019-11-15 00:34:18,570 INFO sqlalchemy.engine.base.Engine (&#39;Lynyrd Skynyrd&#39;, 1964)
+2019-11-15 00:34:18,574 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,577 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,579 INFO sqlalchemy.engine.base.Engine INSERT INTO artists (name, year) VALUES (?, ?)
+2019-11-15 00:34:18,581 INFO sqlalchemy.engine.base.Engine (&#39;Led Zeppelin&#39;, 1968)
+2019-11-15 00:34:18,586 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,589 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,591 INFO sqlalchemy.engine.base.Engine INSERT INTO artists (name, year) VALUES (?, ?)
+2019-11-15 00:34:18,592 INFO sqlalchemy.engine.base.Engine (&#39;Metallica&#39;, 1981)
+2019-11-15 00:34:18,596 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,599 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,602 INFO sqlalchemy.engine.base.Engine INSERT INTO artists (name, year) VALUES (?, ?)
+2019-11-15 00:34:18,603 INFO sqlalchemy.engine.base.Engine (&#39;Slayer&#39;, 1981)
+2019-11-15 00:34:18,606 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,608 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,609 INFO sqlalchemy.engine.base.Engine INSERT INTO artists (name, year) VALUES (?, ?)
+2019-11-15 00:34:18,610 INFO sqlalchemy.engine.base.Engine (&#39;Pantera&#39;, 1981)
+2019-11-15 00:34:18,613 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,614 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,615 INFO sqlalchemy.engine.base.Engine INSERT INTO artists (name, year) VALUES (?, ?)
+2019-11-15 00:34:18,616 INFO sqlalchemy.engine.base.Engine (&#39;Pearl Jam&#39;, None)
+2019-11-15 00:34:18,618 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,619 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,620 INFO sqlalchemy.engine.base.Engine INSERT INTO artists (name, year) VALUES (?, ?)
+2019-11-15 00:34:18,620 INFO sqlalchemy.engine.base.Engine (&#39;Tool&#39;, 1990)
+2019-11-15 00:34:18,621 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,623 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,624 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.id = ?
+2019-11-15 00:34:18,625 INFO sqlalchemy.engine.base.Engine (3,)
+2019-11-15 00:34:18,628 INFO sqlalchemy.engine.base.Engine INSERT INTO albums (name, tracks, artist_id) VALUES (?, ?, ?)
+2019-11-15 00:34:18,629 INFO sqlalchemy.engine.base.Engine (&#39;Master of Puppets&#39;, 8, 3)
+2019-11-15 00:34:18,630 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,632 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,634 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.id = ?
+2019-11-15 00:34:18,634 INFO sqlalchemy.engine.base.Engine (3,)
+2019-11-15 00:34:18,635 INFO sqlalchemy.engine.base.Engine INSERT INTO albums (name, tracks, artist_id) VALUES (?, ?, ?)
+2019-11-15 00:34:18,636 INFO sqlalchemy.engine.base.Engine (&#39;...And Justice for All&#39;, 9, 3)
+2019-11-15 00:34:18,637 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,638 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,639 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.id = ?
+2019-11-15 00:34:18,639 INFO sqlalchemy.engine.base.Engine (7,)
+2019-11-15 00:34:18,641 INFO sqlalchemy.engine.base.Engine INSERT INTO albums (name, tracks, artist_id) VALUES (?, ?, ?)
+2019-11-15 00:34:18,641 INFO sqlalchemy.engine.base.Engine (&#39;Fear Inoculumn&#39;, 10, 7)
+2019-11-15 00:34:18,642 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,643 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,644 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.id = ?
+2019-11-15 00:34:18,645 INFO sqlalchemy.engine.base.Engine (4,)
+2019-11-15 00:34:18,646 INFO sqlalchemy.engine.base.Engine INSERT INTO albums (name, tracks, artist_id) VALUES (?, ?, ?)
+2019-11-15 00:34:18,646 INFO sqlalchemy.engine.base.Engine (&#39;Seasons in the Abyss&#39;, 10, 4)
+2019-11-15 00:34:18,647 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,648 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,649 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.id = ?
+2019-11-15 00:34:18,649 INFO sqlalchemy.engine.base.Engine (4,)
+2019-11-15 00:34:18,650 INFO sqlalchemy.engine.base.Engine INSERT INTO albums (name, tracks, artist_id) VALUES (?, ?, ?)
+2019-11-15 00:34:18,651 INFO sqlalchemy.engine.base.Engine (&#39;Hell Awaits&#39;, 7, 4)
+2019-11-15 00:34:18,652 INFO sqlalchemy.engine.base.Engine COMMIT
+2019-11-15 00:34:18,653 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,654 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.id = ?
+2019-11-15 00:34:18,655 INFO sqlalchemy.engine.base.Engine (5,)
+2019-11-15 00:34:18,657 INFO sqlalchemy.engine.base.Engine INSERT INTO albums (name, tracks, artist_id) VALUES (?, ?, ?)
+2019-11-15 00:34:18,657 INFO sqlalchemy.engine.base.Engine (&#39;Far Beyond Driven&#39;, None, 5)
+2019-11-15 00:34:18,658 INFO sqlalchemy.engine.base.Engine ROLLBACK
+
+ (sqlite3.IntegrityError) NOT NULL constraint failed: albums.tracks
+[SQL: INSERT INTO albums (name, tracks, artist_id) VALUES (?, ?, ?)]
+[parameters: (&#39;Far Beyond Driven&#39;, None, 5)]
+(Background on this error at: http://sqlalche.me/e/gkpj) 
+
+
+ This Session&#39;s transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.IntegrityError) NOT NULL constraint failed: albums.tracks
+[SQL: INSERT INTO albums (name, tracks, artist_id) VALUES (?, ?, ?)]
+[parameters: (&#39;Far Beyond Driven&#39;, None, 5)]
+(Background on this error at: http://sqlalche.me/e/gkpj) (Background on this error at: http://sqlalche.me/e/7s2a) 
+
+2019-11-15 00:34:18,661 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,661 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists
+2019-11-15 00:34:18,662 INFO sqlalchemy.engine.base.Engine ()
+
+ [&lt;Artist(id=1, name=&#39;Lynyrd Skynyrd&#39;, year=1964&gt;, &lt;Artist(id=2, name=&#39;Led Zeppelin&#39;, year=1968&gt;, &lt;Artist(id=3, name=&#39;Metallica&#39;, year=1981&gt;, &lt;Artist(id=4, name=&#39;Slayer&#39;, year=1981&gt;, &lt;Artist(id=5, name=&#39;Pantera&#39;, year=1981&gt;, &lt;Artist(id=6, name=&#39;Pearl Jam&#39;, year=None&gt;, &lt;Artist(id=7, name=&#39;Tool&#39;, year=1990&gt;] 
+
+2019-11-15 00:34:18,664 INFO sqlalchemy.engine.base.Engine SELECT albums.id AS albums_id, albums.name AS albums_name, albums.tracks AS albums_tracks, albums.artist_id AS albums_artist_id, artists_1.id AS artists_1_id, artists_1.name AS artists_1_name, artists_1.year AS artists_1_year 
+FROM albums LEFT OUTER JOIN artists AS artists_1 ON artists_1.id = albums.artist_id
+2019-11-15 00:34:18,665 INFO sqlalchemy.engine.base.Engine ()
+[&lt;Album(id=1, name=Master of Puppets, #tracks=8, artist=Metallica), &lt;Album(id=2, name=...And Justice for All, #tracks=9, artist=Metallica), &lt;Album(id=3, name=Fear Inoculumn, #tracks=10, artist=Tool), &lt;Album(id=4, name=Seasons in the Abyss, #tracks=10, artist=Slayer), &lt;Album(id=5, name=Hell Awaits, #tracks=7, artist=Slayer)]
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Advanced-Queries">Advanced Queries<a class="anchor-link" href="#Advanced-Queries">&#182;</a></h2><p>We will make several queries that attempt to cover a variety of useful SQL features, including group by, aggregation, ordering, and limits.</p>
+<h3 id="All-Artists">All Artists<a class="anchor-link" href="#All-Artists">&#182;</a></h3><p>We begin with something simple. We want to get all the artists in the database.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+
+<span class="n">artists</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Artist</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">artist</span> <span class="ow">in</span> <span class="n">artists</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">artist</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-15 00:34:18,673 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,674 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists
+2019-11-15 00:34:18,674 INFO sqlalchemy.engine.base.Engine ()
+
+&lt;Artist(id=1, name=&#39;Lynyrd Skynyrd&#39;, year=1964&gt;
+&lt;Artist(id=2, name=&#39;Led Zeppelin&#39;, year=1968&gt;
+&lt;Artist(id=3, name=&#39;Metallica&#39;, year=1981&gt;
+&lt;Artist(id=4, name=&#39;Slayer&#39;, year=1981&gt;
+&lt;Artist(id=5, name=&#39;Pantera&#39;, year=1981&gt;
+&lt;Artist(id=6, name=&#39;Pearl Jam&#39;, year=None&gt;
+&lt;Artist(id=7, name=&#39;Tool&#39;, year=1990&gt;
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="All-Artists-with-Albums">All Artists with Albums<a class="anchor-link" href="#All-Artists-with-Albums">&#182;</a></h3><p>We begin with something simple. We want to choose all artists with some albums.</p>
+<p>In regular SQL, this requires us to perform a join on the foreign key between the artist and albums tables.
+SQLAlchemy allows us to express the condition using the logical relation, without going through details of foreign key.</p>
+<p>We can use .any() on the relationship, to get a condition that is satisfied if there relationship is not empty for a row.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="k">import</span> <span class="n">func</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+
+<span class="n">artists</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Artist</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Artist</span><span class="o">.</span><span class="n">albums</span><span class="o">.</span><span class="n">any</span><span class="p">())</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">artist</span> <span class="ow">in</span> <span class="n">artists</span><span class="p">:</span>
+    <span class="c1"># .albums will cause an SQL query to be issued because it is lazy by default</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">artist</span><span class="p">,</span> <span class="n">artist</span><span class="o">.</span><span class="n">albums</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-15 00:34:18,750 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,751 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE EXISTS (SELECT 1 
+FROM albums 
+WHERE artists.id = albums.artist_id)
+2019-11-15 00:34:18,751 INFO sqlalchemy.engine.base.Engine ()
+2019-11-15 00:34:18,753 INFO sqlalchemy.engine.base.Engine SELECT albums.id AS albums_id, albums.name AS albums_name, albums.tracks AS albums_tracks, albums.artist_id AS albums_artist_id 
+FROM albums 
+WHERE ? = albums.artist_id
+2019-11-15 00:34:18,754 INFO sqlalchemy.engine.base.Engine (3,)
+
+ &lt;Artist(id=3, name=&#39;Metallica&#39;, year=1981&gt; [&lt;Album(id=1, name=Master of Puppets, #tracks=8, artist=Metallica), &lt;Album(id=2, name=...And Justice for All, #tracks=9, artist=Metallica)] 
+
+2019-11-15 00:34:18,755 INFO sqlalchemy.engine.base.Engine SELECT albums.id AS albums_id, albums.name AS albums_name, albums.tracks AS albums_tracks, albums.artist_id AS albums_artist_id 
+FROM albums 
+WHERE ? = albums.artist_id
+2019-11-15 00:34:18,755 INFO sqlalchemy.engine.base.Engine (4,)
+
+ &lt;Artist(id=4, name=&#39;Slayer&#39;, year=1981&gt; [&lt;Album(id=4, name=Seasons in the Abyss, #tracks=10, artist=Slayer), &lt;Album(id=5, name=Hell Awaits, #tracks=7, artist=Slayer)] 
+
+2019-11-15 00:34:18,756 INFO sqlalchemy.engine.base.Engine SELECT albums.id AS albums_id, albums.name AS albums_name, albums.tracks AS albums_tracks, albums.artist_id AS albums_artist_id 
+FROM albums 
+WHERE ? = albums.artist_id
+2019-11-15 00:34:18,757 INFO sqlalchemy.engine.base.Engine (7,)
+
+ &lt;Artist(id=7, name=&#39;Tool&#39;, year=1990&gt; [&lt;Album(id=3, name=Fear Inoculumn, #tracks=10, artist=Tool)] 
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Artists-With-At-Least-Two-Albums">Artists With At Least Two Albums<a class="anchor-link" href="#Artists-With-At-Least-Two-Albums">&#182;</a></h3><p>This query is a bit different from the previous one, because it involves selecting the artist information, as well as information about the albums. SQLAlchemy provides us with a variety of aggregate functions, that can aggregate information at the database side, count is one such function, that returns the count of entries in a specific column.</p>
+<p>Note that we are not interested in the total number of albums in the entire database, rather the total number of albums <strong>per</strong> artist. Therefore, we should group by artists and aggregate these groupings.</p>
+<p>Lastely, the condition of having two or more albums can only be applied <strong>after</strong> the group by and aggregate is executed. SQL provides a <em>having</em> construct, which executes a filter after aggregation. SQLAlchemy provides having as well. SQLAlchemy provides a filter function as well, which is translated to an <em>where</em>, which gets executed prior to aggregation.</p>
+<p>Finally, our query now referes to columns within the albums table. So we must instruct SQLAchemy to join with that table. SQLAlchemy automatically figures out how to perform this join, based on the logical relationships defined in the schema.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="k">import</span> <span class="n">func</span><span class="p">,</span> <span class="n">text</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+
+<span class="c1"># This is not recommended, because it uses SQL as a string</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;query 1&#39;</span><span class="p">)</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Artist</span><span class="p">,</span> <span class="n">func</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">Album</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s1">&#39;count&#39;</span><span class="p">))</span> <span class="c1"># specify what to select</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">Album</span><span class="p">)</span> <span class="c1"># join with albums</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">Artist</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="c1"># group based on artists</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">having</span><span class="p">(</span><span class="n">text</span><span class="p">(</span><span class="s1">&#39;count &gt; 1&#39;</span><span class="p">))</span> <span class="c1"># keep only records with more than 1 album</span>
+<span class="n">artists</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">artist</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span> <span class="ow">in</span> <span class="n">artists</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">artist</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
+
+<span class="c1"># A bit better</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;query 2&#39;</span><span class="p">)</span>
+<span class="n">count</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">Album</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="c1"># count now can be utilized in python</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Artist</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span> <span class="c1">#same as before</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">Album</span><span class="p">)</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">Artist</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">having</span><span class="p">(</span><span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># same condition, but written in python</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">artist</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">artist</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>query 1
+2019-11-15 00:34:18,835 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,838 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year, count(albums.id) AS count 
+FROM artists JOIN albums ON artists.id = albums.artist_id GROUP BY artists.id 
+HAVING count &gt; 1
+2019-11-15 00:34:18,839 INFO sqlalchemy.engine.base.Engine ()
+&lt;Artist(id=3, name=&#39;Metallica&#39;, year=1981&gt; 2
+&lt;Artist(id=4, name=&#39;Slayer&#39;, year=1981&gt; 2
+
+query 2
+2019-11-15 00:34:18,852 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year, count(albums.id) AS count_1 
+FROM artists JOIN albums ON artists.id = albums.artist_id GROUP BY artists.id 
+HAVING count(albums.id) &gt; ?
+2019-11-15 00:34:18,854 INFO sqlalchemy.engine.base.Engine (1,)
+&lt;Artist(id=3, name=&#39;Metallica&#39;, year=1981&gt; 2
+&lt;Artist(id=4, name=&#39;Slayer&#39;, year=1981&gt; 2
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Get-The-Two-Bands-With-The-Most-Number-of-Tracks">Get The Two Bands With The Most Number of Tracks<a class="anchor-link" href="#Get-The-Two-Bands-With-The-Most-Number-of-Tracks">&#182;</a></h3><p>The first part of this query is similar to the previous one, we want to join with the albums table, because it is the table with the tracks information. We also want to aggregate the albums grouped by their artists.</p>
+<p>The difference now is that we want to sum the number of tracks, instead of using count. Additionally, we should order the produced rows by the sum, and pick only the top two.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">session</span> <span class="o">=</span> <span class="n">SessionMaker</span><span class="p">()</span>
+
+<span class="n">tracks_sum</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Album</span><span class="o">.</span><span class="n">tracks</span><span class="p">)</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Artist</span><span class="p">,</span> <span class="n">tracks_sum</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">Album</span><span class="p">)</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">Artist</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">tracks_sum</span><span class="o">.</span><span class="n">desc</span><span class="p">())</span> <span class="c1"># order in descending order</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># get only the first 2 results</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">artist</span><span class="p">,</span> <span class="n">tracks</span><span class="p">)</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">artist</span><span class="p">,</span> <span class="n">tracks</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-15 00:34:18,922 INFO sqlalchemy.engine.base.Engine BEGIN (implicit)
+2019-11-15 00:34:18,923 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year, sum(albums.tracks) AS sum_1 
+FROM artists JOIN albums ON artists.id = albums.artist_id GROUP BY artists.id ORDER BY sum(albums.tracks) DESC
+ LIMIT ? OFFSET ?
+2019-11-15 00:34:18,924 INFO sqlalchemy.engine.base.Engine (2, 0)
+&lt;Artist(id=3, name=&#39;Metallica&#39;, year=1981&gt; 17
+&lt;Artist(id=4, name=&#39;Slayer&#39;, year=1981&gt; 17
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Behind-The-Scenes">Behind The Scenes<a class="anchor-link" href="#Behind-The-Scenes">&#182;</a></h1><p>Here we will look more at how SQLAlchemy implements certain features behind the scenes.</p>
+<h2 id="Declarative-Base">Declarative Base<a class="anchor-link" href="#Declarative-Base">&#182;</a></h2><p>How does SQLAlchemy keep track of which python classes are modules? Modules inherit from a declarative base. However, inheritance is a passive operation. It does not notify the parent class of the act of inheritance (not at definition time at least).</p>
+<p>The easy solution for this would be to require developers to manually register their modules, by calling some function. However, python provide a better automated solution via MetaClasses: <a href="https://github.com/sqlalchemy/sqlalchemy/tree/master/lib/sqlalchemy/ext">source</a>.</p>
+<h2 id="Meta-Classes">Meta Classes<a class="anchor-link" href="#Meta-Classes">&#182;</a></h2><p>A Meta class, is a class whose instances are classes themselves. It is a class that gives classes instead of objects.</p>
+<p>A meta class can be written in python by inheriting from type.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">class</span> <span class="nc">RegisteringMetaClass</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">clsname</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;register&#39;</span><span class="p">,</span> <span class="n">clsname</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">clsname</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">MyClass</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">RegisteringMetaClass</span><span class="p">):</span>
+    <span class="n">attr</span> <span class="o">=</span> <span class="s1">&#39;my attribute&#39;</span>
+    <span class="k">def</span> <span class="nf">func</span><span class="p">():</span>
+        <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">MyClass2</span><span class="p">(</span><span class="n">MyClass</span><span class="p">):</span>
+    <span class="n">attr2</span> <span class="o">=</span> <span class="s1">&#39;other attribute&#39;</span>
+
+<span class="k">class</span> <span class="nc">MyClass3</span><span class="p">():</span>
+    <span class="k">pass</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>register MyClass (&lt;class &#39;object&#39;&gt;,) dict_keys([&#39;func&#39;, &#39;attr&#39;, &#39;__module__&#39;, &#39;__qualname__&#39;])
+register MyClass2 (&lt;class &#39;__main__.MyClass&#39;&gt;,) dict_keys([&#39;attr2&#39;, &#39;__module__&#39;, &#39;__qualname__&#39;])
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>The above example uses the metaclass=<metaclass> syntax, which is explicit but not regular. SQLAlchemy classes inherit from Base directly without refering to MetaClass. This can be achieved by ensuring that Base is a class defined with metaclass=<Metaclass>, or by getting an instance of the metaclass (whose instances are classes themselves), and using it as the parent class in inheritance.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">mysetattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;instrumented&#39;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="nb">super</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">InstrumentingMetaClass</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">clsname</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">clsname</span> <span class="o">!=</span> <span class="s1">&#39;Base&#39;</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;instrument&#39;</span><span class="p">,</span> <span class="n">clsname</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;__setattr__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mysetattr</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">clsname</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+
+<span class="c1"># instances of the meta class are indeed classes</span>
+<span class="n">MetaClassInstance</span> <span class="o">=</span> <span class="n">InstrumentingMetaClass</span><span class="p">(</span><span class="s1">&#39;Base&#39;</span><span class="p">,</span> <span class="p">(</span><span class="nb">object</span><span class="p">,),</span> <span class="p">{})</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;MetaClassInstance =&#39;</span><span class="p">,</span> <span class="n">MetaClassInstance</span><span class="p">)</span>
+
+<span class="c1"># inheriting from an instance of the metaclass applies the metaclass implicitly</span>
+<span class="c1"># this is the same behavior as MyClass2 above</span>
+<span class="k">class</span> <span class="nc">ConcreteClass</span><span class="p">(</span><span class="n">MetaClassInstance</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">my_attr</span> <span class="o">=</span> <span class="s1">&#39;Test&#39;</span>
+
+<span class="n">instance</span> <span class="o">=</span> <span class="n">ConcreteClass</span><span class="p">()</span>
+<span class="n">instance</span><span class="o">.</span><span class="n">my_attr</span> <span class="o">=</span> <span class="s1">&#39;Test 2&#39;</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>MetaClassInstance = &lt;class &#39;__main__.Base&#39;&gt;
+instrument ConcreteClass 
+
+instrumented my_attr Test
+instrumented my_attr Test 2
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Query-Implementation">Query Implementation<a class="anchor-link" href="#Query-Implementation">&#182;</a></h2><p>Another interesting thing to look at is how queries are implemented. In particular, how they get built up incrementally and translated to SQL, and how column-based conditions and manipulations work.</p>
+<h3 id="Query-Class-and-Objects">Query Class and Objects<a class="anchor-link" href="#Query-Class-and-Objects">&#182;</a></h3><p>Source code: <a href="https://github.com/zzzeek/sqlalchemy/blob/master/lib/sqlalchemy/orm/query.py">Query</a>.</p>
+<p>The first thing to notice is that calling session.query() returns an object from sqlalchemy's Query class.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">query</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Artist</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;type(query) =&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">query</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>type(query) = &lt;class &#39;sqlalchemy.orm.query.Query&#39;&gt;
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Second, note that the Query class overrides __str__(), so that it dumps the SQL statment that is equivalent to the query object.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sql</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>As expected, all the functionality we have been using before for querying is implemented as methods in the Query class. This includes filter, order_by, limit, join, all, and many others.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[12]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">sqlalchemy.orm.query</span> <span class="k">import</span> <span class="n">Query</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Query</span><span class="o">.</span><span class="n">filter</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Query</span><span class="o">.</span><span class="n">order_by</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Query</span><span class="o">.</span><span class="n">limit</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Query</span><span class="o">.</span><span class="n">join</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Query</span><span class="o">.</span><span class="n">all</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>&lt;function Query.filter at 0x7f240bc17ea0&gt;
+&lt;function Query.order_by at 0x7f240bc1a158&gt;
+&lt;function Query.limit at 0x7f240bc19730&gt;
+&lt;function Query.join at 0x7f240bc1a7b8&gt;
+&lt;function Query.all at 0x7f240bc19b70&gt;
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Columns-and-Conditions">Columns and Conditions<a class="anchor-link" href="#Columns-and-Conditions">&#182;</a></h3>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>In this lecture, we will look at the solutions to <a href="https://kinanbab.github.io/CS591L1/website/html/project-2-2019-10-21.html">mini-project/homework 2</a>. Through these solutions, we will look more formally at types systems and typing rules.</p>
-<p>In this problem, you were tasked with implementing a tool that can analyze programs, and statically enforce that protected variables in these programs are never assigned null. In these notes, we will restrict ourselves to python programs.</p>
-<h3 id="Syntax">Syntax<a class="anchor-link" href="#Syntax">&#182;</a></h3><p>For simplicity, the problem restricted the constructs that the tool must support to be: (1) function definitions (2) function calls (3) variable assignment (4) and return statements. This will be the restricted syntax of our supported subset of the python language:</p>
-
-<pre><code>program := statement*
-statement := functionDefinition | functionCall | assignmentStatement | returnStatement
-
-functionDefinition := 'def' identifier '(' (identifier ( ',' identifier )* )? ')' ':' statement*
-functionCall := identifier '(' (expression ( ',' expression )* ) ? ')'
-assignmentStatement := identifier '=' expression
-returnStatement := 'return' expression
-
-expression := numericaLiteral | stringLiteral | 'None' | identifier | functionCall
-...</code></pre>
-<h3 id="Semantics">Semantics<a class="anchor-link" href="#Semantics">&#182;</a></h3><p>The problem relies on regular python semantics. These can be formally defined in many ways. We will not attempt to formalize them here. The semantics are more or less obvious due to the extreme restrictions on our syntax. Note that in a formal tool with associated formal proofs the semantics need to be defined rigorously.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Null-Safety">Null-Safety<a class="anchor-link" href="#Null-Safety">&#182;</a></h2><p>The problem definition outlines the different cases that the tool must check for. These cases are shown in an intuitive way in the problem definition for simplicity, and appear ad-hoc. However, they are not.</p>
-<p>One way to produce such list of cases is to go over all combinations of statements allowed by the syntax, look at their associated formal semantics, and list charactristics of which combinations are forbidden. This was indeed our thought process while creating the homework description.</p>
-<p>Think of the restricted sytnax (and associated semantics) shown above. Which of the statements can affect null-safety? Null-safety is a property of varaibles. Therefore, the statements that can affect it are statements that change the value assigned to a variable.</p>
-<p>The most obvious case is variable assignment. It can assign None directly to a varaible, or indirectly by assigning a variable or expression whose value is really None. This is the first case our tool must check for. Note that this already creates a first difficulty. We need to devise a way that allows us to determine if a variable is None or not to be able to check assignments to other variables, as well as a similar way to determine if a function call returns None or not.</p>
-<p>The second case is more implicit: function calling. When a function is called, the given arguments are assigned to the function parameters. If some of the function parameters are protected, then the function cannot be called in a way that sets these parameters to None, either directly (by passing None explicitly) or indirectly (by passing an expressions whose value is None). We are faced with the same difficulty here, since arguments in a function call can be a variable or an expression.</p>
-<p>In general, determining if an expression is None or not with absolute accuracy is undecidable. However, we can be conservative. We can come up with an approach that detects None expressions always, but may mistake some expressions that are not None as None expressions. Another way to describe such an approach is to say that it errors on the side of caution, when it cannot determine if an expression is None or not, it will assume it is None to be safe.</p>
-<p>This is one fundemental idea behind type systems in programming languages. A strongly typed programming language can sometimes restrict the behavior of the programmer in certain cases when the type checker cannot really determine if the expressions match up to the right type. In such cases, the programmer is required to perform some additional work to convince the type checker that things are ok, or to tell the type checker to accept the expressions, one example is type casting (e.g. in Java or C++).</p>
-<p>The problem does not require that the tool be implemented using types. Mainly because python is not statically typed, and it will be too cumbersome to change it to support better static typing for null-safety. Instead, the problem suggests a different approach, variables (and functions) whose names start with '_n_' are assumed to be protected (i.e. have a null-safe types), while other are assumed to be unprotected (i.e. have a nullable type).</p>
-<p>This approache is common in many program analysis tools. Although it may be specified differently. In our case, we require the programmer to input some helpful annotations about the type of variables via their names. Other tools may ask the programmer to input such information using special comments, special syntax, decorators or annotations, etc.</p>
-<p>Finally, this approache gives us a third case to consider. A function that is marked as null-safe (i.e starts with '_n_') cannot return None (either directly or indirectly via an unsafe expression). Therefore, our tool must look at return statements as well. Note that this solves our previous difficulties: we can now check if a variable or function is safe by checking its name.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Type-Systems-and-Typing-Rules">Type Systems and Typing Rules<a class="anchor-link" href="#Type-Systems-and-Typing-Rules">&#182;</a></h1><p>We can formalize the cases we describe above as rules for our tool. In a more formal setting, we can think of these rules as typing rules indicating how a type checker should work, or proof rules indicating how a reasoning engine should work.</p>
-<p>The syntax commonly used for such a rule is simple. Every rule consists of a single horizontal line. Above the line, several assumptions can be written, while a single conclusion must be written below it. Such a rule indicates that if the assumptions are met, the conclusion must be valid.</p>
-<p>In the context of a proof rule or a logic rule, the conclusion is a statement that is guaranteed to be true if the assumptions can be shown to be true using the same or other rules in the system. In the context of type systems, such a rule indicates that if the constructs in the assumptions are shown to have the specified types (using rules of the system), then the construct in the statement is shown to have the desired type.</p>
-<p>Here is a simple example in the context of type systems. The expression 'x + y' can be shown to have type number if both x and y are numbers, while it can shown to be of type string if one of them is a string.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(x) = number, &nbsp; type(y) = number
-    </span> <br/>
-    type(x + y) = number
-</div> <br> <br> <br>
-
-<div style="clear: both; float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(x) = string
-    </span> <br/>
-    type(x + y) = string
-</div><div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(y) = string
-    </span> <br/>
-    type(x + y) = string
-</div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>The way these rules are defined above is very restrictive and is generally unsufficient to describe interesting type systems. Particularly, it cannot describe any dynamic type system, where variables may have different types in different pieces of the program, or depending on the program execution. For example, a program that sets x to a number if some condition is true, or to a string otherwise.</p>
-<p>This unsufficiency is due to the fact that the type of any variable is set in absolute terms in these rules, not relative to the program execution or the position in the program.</p>
-<p>This unsufficiency is addressed in real type systems by relying on an environemnt or a context: this environment can store information about the program being analyzed (such as the position in the program), but most importantly, can also store the <strong>current</strong> types of constructs in the language.</p>
-<p>We show an example of this below. The example uses formal notations that are the convention when discussing type systems: &Gamma; is the name we give to our current environment, '&lt;variable&gt; : &lt;type&gt;' means that the variable has the given type, &#8866; (read turnstile) means that the environment provided on the left dictates that the expression on the right side is of the given type.</p>
-<p>The first rule is very simple, it indicates that the type of any expression or variable (call it x) is the same type as what the environment indicates it to be (call it t).</p>
-<p>The second rule is more interesting and can be difficult to interpret. Rules of this kind are generally called sequence rules. We want to type a program made out of two statements, the first sets some variable x1 to be some expression exp1, and the second is exp2. If exp1 has type t1, and if exp2 has type t2 when x has type t1, then exp2 in the sequence can be typed to t2.</p>
-<p>The interesting part of this rule is the second assumption above the line. Note that the environemnt in that assumption is extended with associating x1 with type t1. This reflects that the previous statement assigned exp1 to x1, and exp1 is of type t1.</p>
-<p>The last rule is a direct translation of the first rule above using our new formal notation.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>Rule 1: <div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    x: t &isin; &Gamma;
-    </span> <br/>
-    &Gamma; &#8866; x: t
-</div> <br> <br> <br></p>
-<p>Rule 2: <div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    &Gamma; &#8866; exp1: t1, &nbsp; &nbsp; &Gamma; &cup; {x1: t1} &#8866; exp2: t2
-    </span> <br/>
-    &Gamma; &#8866; 'x1 = exp1; exp2': t2
-</div> <br> <br> <br></p>
-<p>Rule 3:</p>
-<div style="clear: both; float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    &Gamma; &#8866; x: number, &nbsp; &nbsp; &Gamma; &#8866; y: number
-    </span> <br/>
-    &Gamma; &#8866; x + y: number
-</div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Null-Safety-Type-System">Null-Safety Type System<a class="anchor-link" href="#Null-Safety-Type-System">&#182;</a></h1><p>Now, we can formally define the cases described above for problem 1, using our new formal notation for typing rules.</p>
-<p>Our rules do not require an environment, this is because we can determine whether a variable or function is protected statically using its name, and because variables and functions are either always protected, or are never protected (they do not change during execution).</p>
-<p>This is intentional on our part when we were desiging the problem. Since we have no need for an environment or context. The implementation you had to for the tool can be simple. It does not need to keep track of some environment table and update it continously as the tool analyzes the program.</p>
-<p>Another benefit is that we can look at statements independently of one another. Since previous statements do not really affect with the current statement is valid or not.</p>
-<p>Our system has two types: nullable which means that the variable or function can be None, null-safe which means that the variable or function are protected, and valid which means that a given statement is valid and does not break null-safety. Any statement that cannot be typed is assumed to be invalid, and should be rejected by the solution.</p>
-<h4> Null-Safe Expressions Rules:</h4>
-We start with the simplest rules in order: variables and functions with names starting with \_n\_ are null-safe, as well as numbers and strings. Note that a null-safe function should also return a null-safe value.
-
-<p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    x starts with _n_
-    </span> <br/>
-    &#8866; x: null-safe
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    f starts with _n_ , &nbsp; &nbsp; &forall; i( &#8866; s_i: valid), &nbsp; &nbsp; &#8866; e: null-safe
-    </span> <br/>
-    &#8866; 'f(param_1,..., param_n): s_1 ... s_n return e': null-safe
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    </span> <br/>
-    &#8866; all integers and strings: null-safe
-</div>
-<div style="clear: both;"></div>
-
-<h4> Nullable Expressions Rules:</h4><p>Next, we define unsafe variables and functions. We do not restrict such functions, they can return anything (or not contain a return statement at all), hence the optional [return e] at the end.</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    x does not start with _n_
-    </span> <br/>
-    &#8866; x: nullable
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &nbsp; &nbsp; &nbsp; f does not start with _n_, &nbsp; &nbsp; &forall; i( &#8866; s_i: valid) &nbsp;
-    </span> <br/>
-    &#8866; 'f(param_1,..., param_n): s_1 ... s_n [return e]' :  nullable
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    </span> <br/>
-    &#8866; None: nullable
-</div>
-<div style="clear: both;"></div><p>Note that the rules that describe function definitions above require that every statement in the function body is valid.</p>
-<h4> Assignments Rules:</h4><p>Now, we can define valid assignments: these include null-safe assignments to protected variables, or any assignment to a nullable variables.</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; x: null-safe, &nbsp; &nbsp; &#8866; e: null-safe
-    </span> <br/>
-    &#8866; 'x = e': valid
-</div><div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; x: nullable
-    </span> <br/>
-    &#8866; 'x = e': valid
-</div>
-<div style="clear: both;"></div><h4> Function Call Rule:</h4>
-So far, our rules cover almost all of our syntax: they include assignments, function definitions, and primitive expressions. However, they do not include function calls yet. We provide the final rule for that below: it requires that any protected parameter in the function definition is passed a null-safe expression in the function call. The rule gives the function call the same type as the function definition (either nullable or null-safe).
-
-<p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; 'f(param_1, ..., param_n): ...': T, &nbsp; &nbsp; &forall; i(&#8866; param_i: null-safe &rarr; &#8866; e_i: null-safe)
-    </span> <br/>
-    &#8866; 'f(e_1, ..., e_n)': T
-</div>
-<div style="clear: both;"></div>
-
-<h4> Program Rule:</h4><p>Finally, we say that a program is valid in our type system, if every statement in it is valid. Note that some statements (like a function call) will have type null-safe or nullable even when valid. So our rule must allow that as well. Another way to phrase this rule is to say that the whole program is typable (i.e. valid) if every statement in it is typable (i.e. has a type).</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &nbsp; &nbsp; &nbsp; &forall; i(&#8866; s_i: T_i) &nbsp; &nbsp; &nbsp; where T_1, ..., T_n &isin; {valid, null-safe, nullable}
-    </span> <br/>
-    &#8866; 's_1 ... s_n': valid
-</div>
-<div style="clear: both;"></div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Example-derivation">Example derivation<a class="anchor-link" href="#Example-derivation">&#182;</a></h2><p>The typing rules defined above can be implemented by an automated tool (similar to your solutions for problem 1), that checks if a given program is valid. It can also be used by hand. If the rules can be applied to <strong>derive</strong> that a given program is valid, then we accept the program to be valid. Otherwise, we say it is invalid.</p>
-<p>Here is one simple example program:</p>
-
-<pre><code>_n_x = 10
-y = None</code></pre>
-<p>We can show that this program is valid as follows:</p>
+<p>In the queries we have seen so far, we regularly used typical python operators, such as &gt; or ==, to define conditions on columns. This may seem weird at first. Semantically, we are used to using &gt; and == to compare Python values eagerly. However, here they are being used in a lazy way, and their actual execution happens at the database side.</p>
+<p>Let us try to analyze how this is implemented systematically.</p>
+<p>First, note two important observations:</p>
 <ol>
-<li>First, note that the only rule we can apply to derive the validity of the <strong>entire</strong> program is the last program rule. However, we can only apply it if we show that every statement in the program is valid first.</li>
-<li>The first statement can be shown to be valid using the first assignment rule, since _n_x has type null-safe by the very first rule in our system, and 10 is also null-safe by the third rule.</li>
-<li>The second statement can be shown to be valid by the second assignment rule, since y has type nullable by the first nullable rule.</li>
-<li>Using 2 and 3 as assumptions, we can apply the program rule to show the program is valid.</li>
+<li><strong>&lt;ModuleClass&gt;.&lt;column_name&gt;</strong> is an instance object from SQLAlchemy's instrumented attribute class. This allows SQLAlechmy to customize how this column is used. This is a bit surprising. Looking at the definition of Artist class above, we may be led to believe that this should be an instance of Column, since thats how we define this property. However, SQLAlchemy uses the fact that Base controls the metaclass of our modules, to instrument their properties at definition time. The instrumented property contains the column definition and its information.</li>
+<li><strong>&lt;module_instance&gt;.&lt;column_name&gt;</strong> is a python value corresponding to the value of that column in the respective row in the table.</li>
 </ol>
-<p>We can derive the validity of more complicated programs in the same way, using a bottom-up approach, where we type building blocks of every statement first, then use these types as assumptions to type the statement next, and so on.</p>
-<p>On the other hand, the following program cannot be typed in our system:</p>
-
-<pre><code>_n_x = None</code></pre>
-<p>The only way to type this program will be to use the first assignment rule to show the validity of the statement. However, that rule requires that the assigned expression have type null-safe, but None cannot be assigned type null-safe with any of the rules we have above.</p>
 
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[13]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">artist</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Artist</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;type(artist.name), artist.name =&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">artist</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">artist</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;type(Artist.name), Artist.name =&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">Artist</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">Artist</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2019-11-15 00:34:19,477 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.id = ?
+2019-11-15 00:34:19,479 INFO sqlalchemy.engine.base.Engine (3,)
+
+type(artist.name), artist.name = &lt;class &#39;str&#39;&gt; Metallica
+type(Artist.name), Artist.name = &lt;class &#39;sqlalchemy.orm.attributes.InstrumentedAttribute&#39;&gt; Artist.name
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Correctness-/-Soundness">Correctness / Soundness<a class="anchor-link" href="#Correctness-/-Soundness">&#182;</a></h2><p>Type systems such as the one we defined above can be complex, and may contain many rules. It is non-trivial to design such a type system correctly.</p>
-<p>Imagine if we made some mistake in our rules above, that allow us to type 'None' as null-safe. In such a case, our buggy type system will be useless. It will be able to type anything as valid!</p>
-<p>Therefore, type system designers often attempt to formally prove that their type system is correct (the technical word is sound). These proofs are usually long and tedious, but not very deep. Sometimes, automated reasoning tools (such as interactive theorem provers) are used to check these proofs, to ensure that the proofs themselves do not have bugs.</p>
-<p>Generally, such proofs work via induction on the syntax of the language. In other words, it tries to prove the soundness of the type system for <strong>all</strong> combinations of valid programs according to the syntax. The proof starts with simple syntax constructs first (e.g. expressions or assignments), which will constitute the base case in the induction, and move to more complicated constructs afterwards (e.g. a function definition that contains several statements in its body) later, which will constitute the inductive steps.</p>
-<p>Every case in the proof refers back to the formal semantics of the language, to show that every typing rule or derivation is consistent with these semantics.</p>
-<p>Traditionally, soundness of type systems is defined as two properties: type preservation and progress. The first requires that if some expression is assigned some type using the typing rules, then evaluating that expression must yield a value (or a new expression) that retains that type. The second states that expressions that can be typed using the typing rules, and which are not values, can always be evaluated further. This does not guarantee termination (since the evaluation can yield a new expression ad infinity), but does guarantee that the program never gets stuck in some invalid state.</p>
-<p>We omit a formal proof for our null-safe type system above because we do not have such formal semantics.</p>
+<p>This can lead to confusion at times, at the surface of it, it seems like .name should be the same in both instances and their class. However, python supports having static and object-bound attributes with the same name. Below is a small demonstration of that.</p>
 
 </div>
 </div>
 </div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">class</span> <span class="nc">MyClass</span><span class="p">():</span>
+    <span class="n">attr1</span> <span class="o">=</span> <span class="s1">&#39;Static attribute 1&#39;</span>
+    <span class="n">attr2</span> <span class="o">=</span> <span class="s1">&#39;Static attribute 2&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">attr1</span> <span class="o">=</span> <span class="s1">&#39;Object-bound attribute&#39;</span>
+
+<span class="n">obj</span> <span class="o">=</span> <span class="n">MyClass</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">MyClass</span><span class="o">.</span><span class="n">attr1</span><span class="p">,</span> <span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">MyClass</span><span class="o">.</span><span class="n">attr2</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">attr1</span><span class="p">,</span> <span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">obj</span><span class="o">.</span><span class="n">attr2</span><span class="p">)</span>
+
+        
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Static attribute 1 , Static attribute 2
+Object-bound attribute , Static attribute 2
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Further-Reading">Further Reading<a class="anchor-link" href="#Further-Reading">&#182;</a></h1><p>The area of type systems and type theory is very large. If you are interesting, you can look at any of the following resources, ordered by how in-depth they are:</p>
+<p>Looking deeper at the content of the instrumented attributes, we can see that InstrumentedAttribute overrides a variety of operators, including &gt;, &lt;, and ==. This means that when we use these operators on instrumented attribute objects, SQLAlchemy functions are executed, and they define the semantics of those operators.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="nb">dir</span><span class="p">(</span><span class="n">Artist</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Artist</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="fm">__le__</span><span class="p">)</span> <span class="c1"># this function overrides (Artist.name &lt; things)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[&#39;__add__&#39;, &#39;__and__&#39;, &#39;__class__&#39;, &#39;__clause_element__&#39;, &#39;__contains__&#39;, &#39;__delattr__&#39;, &#39;__delete__&#39;, &#39;__dict__&#39;, &#39;__dir__&#39;, &#39;__div__&#39;, &#39;__doc__&#39;, &#39;__eq__&#39;, &#39;__format__&#39;, &#39;__ge__&#39;, &#39;__get__&#39;, &#39;__getattr__&#39;, &#39;__getattribute__&#39;, &#39;__getitem__&#39;, &#39;__gt__&#39;, &#39;__hash__&#39;, &#39;__init__&#39;, &#39;__invert__&#39;, &#39;__le__&#39;, &#39;__lshift__&#39;, &#39;__lt__&#39;, &#39;__mod__&#39;, &#39;__module__&#39;, &#39;__mul__&#39;, &#39;__ne__&#39;, &#39;__neg__&#39;, &#39;__new__&#39;, &#39;__or__&#39;, &#39;__radd__&#39;, &#39;__rdiv__&#39;, &#39;__reduce__&#39;, &#39;__reduce_ex__&#39;, &#39;__repr__&#39;, &#39;__rmod__&#39;, &#39;__rmul__&#39;, &#39;__rshift__&#39;, &#39;__rsub__&#39;, &#39;__rtruediv__&#39;, &#39;__selectable__&#39;, &#39;__set__&#39;, &#39;__setattr__&#39;, &#39;__sizeof__&#39;, &#39;__slots__&#39;, &#39;__str__&#39;, &#39;__sub__&#39;, &#39;__subclasshook__&#39;, &#39;__truediv__&#39;, &#39;__weakref__&#39;, &#39;_adapt_to_entity&#39;, &#39;_bulk_update_tuples&#39;, &#39;_impl_uses_objects&#39;, &#39;_is_internal_proxy&#39;, &#39;_of_type&#39;, &#39;_parententity&#39;, &#39;_parentmapper&#39;, &#39;_query_clause_element&#39;, &#39;_supports_population&#39;, &#39;adapt_to_entity&#39;, &#39;adapter&#39;, &#39;all_&#39;, &#39;any&#39;, &#39;any_&#39;, &#39;any_op&#39;, &#39;asc&#39;, &#39;between&#39;, &#39;bool_op&#39;, &#39;class_&#39;, &#39;collate&#39;, &#39;comparator&#39;, &#39;concat&#39;, &#39;contains&#39;, &#39;desc&#39;, &#39;dispatch&#39;, &#39;distinct&#39;, &#39;endswith&#39;, &#39;expression&#39;, &#39;extension_type&#39;, &#39;get_history&#39;, &#39;has&#39;, &#39;has_op&#39;, &#39;hasparent&#39;, &#39;ilike&#39;, &#39;impl&#39;, &#39;in_&#39;, &#39;info&#39;, &#39;is_&#39;, &#39;is_aliased_class&#39;, &#39;is_attribute&#39;, &#39;is_clause_element&#39;, &#39;is_distinct_from&#39;, &#39;is_instance&#39;, &#39;is_mapper&#39;, &#39;is_property&#39;, &#39;is_selectable&#39;, &#39;isnot&#39;, &#39;isnot_distinct_from&#39;, &#39;key&#39;, &#39;label&#39;, &#39;like&#39;, &#39;match&#39;, &#39;notilike&#39;, &#39;notin_&#39;, &#39;notlike&#39;, &#39;nullsfirst&#39;, &#39;nullslast&#39;, &#39;of_type&#39;, &#39;of_type_op&#39;, &#39;op&#39;, &#39;operate&#39;, &#39;parent&#39;, &#39;prop&#39;, &#39;property&#39;, &#39;reverse_operate&#39;, &#39;startswith&#39;, &#39;timetuple&#39;] 
+
+&lt;bound method ColumnOperators.__le__ of &lt;sqlalchemy.orm.attributes.InstrumentedAttribute object at 0x7f240bb1f9e8&gt;&gt;
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Finally, now we can see the effect of such an operator. It returns an SQLAlchemy object that keeps track of what operators were used, which when passed to the query object, are analyzed and added to the corresponding SQL statement.</p>
+<p>This is very similar to our Lazy deep embedding from several weeks ago, and it is a common technique for runtime embedding of translators or analyzers.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#from sqlalchemy import and_</span>
+
+<span class="n">condition1</span> <span class="o">=</span> <span class="n">Artist</span><span class="o">.</span><span class="n">year</span> <span class="o">&gt;</span> <span class="mi">1980</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">condition1</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">condition1</span><span class="p">))</span>
+
+<span class="n">query2</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">condition1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">query2</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">query2</span><span class="p">))</span>
+
+<span class="n">condition2</span> <span class="o">=</span> <span class="n">Artist</span><span class="o">.</span><span class="n">year</span> <span class="o">&lt;=</span> <span class="mi">1990</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>&lt;class &#39;sqlalchemy.sql.elements.BinaryExpression&#39;&gt;
+artists.year &gt; :year_1
+
+&lt;class &#39;sqlalchemy.orm.query.Query&#39;&gt;
+SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.year &gt; ?
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>The power of such a deep embedding is that its constructs can be composed and combined arbitrarily, in unison with other python constructs. For example, conditions may be passed between functions as parameters, or get created inside for loops or if statements.</p>
+<p>Here is a simple example demonstrating this ability.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[17]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">create_condition</span><span class="p">(</span><span class="n">column</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">column</span> <span class="o">&lt;=</span> <span class="mi">1990</span>
+
+<span class="n">condition2</span> <span class="o">=</span> <span class="n">create_condition</span><span class="p">(</span><span class="n">Artist</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">condition2</span><span class="p">))</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="k">import</span> <span class="n">and_</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">and_</span><span class="p">)</span>
+
+<span class="n">condition</span> <span class="o">=</span> <span class="n">and_</span><span class="p">(</span><span class="n">condition1</span><span class="p">,</span> <span class="n">condition2</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">condition</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">condition</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>artists.year &lt;= :year_1
+
+&lt;function and_ at 0x7f24202c7598&gt;
+
+&lt;class &#39;sqlalchemy.sql.elements.BooleanClauseList&#39;&gt;
+artists.year &gt; :year_1 AND artists.year &lt;= :year_2
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Finally, we can use these conditions when desired by passing them to queries. A condition is a plain Lazy object that does not posses any execution specific values, and therefore it can be re-used by several queries.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[18]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">condition</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">query</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">query</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>&lt;class &#39;sqlalchemy.orm.query.Query&#39;&gt;
+SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.year &gt; ? AND artists.year &lt;= ?
+
+2019-11-15 00:34:19,997 INFO sqlalchemy.engine.base.Engine SELECT artists.id AS artists_id, artists.name AS artists_name, artists.year AS artists_year 
+FROM artists 
+WHERE artists.year &gt; ? AND artists.year &lt;= ?
+2019-11-15 00:34:19,999 INFO sqlalchemy.engine.base.Engine (1980, 1990)
+
+[&lt;Artist(id=3, name=&#39;Metallica&#39;, year=1981&gt;, &lt;Artist(id=4, name=&#39;Slayer&#39;, year=1981&gt;, &lt;Artist(id=5, name=&#39;Pantera&#39;, year=1981&gt;, &lt;Artist(id=7, name=&#39;Tool&#39;, year=1990&gt;]
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Other-Interesting-Implementation-Details">Other Interesting Implementation Details<a class="anchor-link" href="#Other-Interesting-Implementation-Details">&#182;</a></h3><p>There are many other interesting aspects of SQLAlchemy that are worth further discussion. For brievity, we only highlight a couple of them.</p>
 <ol>
-<li>This wikipedia <a href="https://en.wikipedia.org/wiki/Type_system">article</a> with an overview on types from a practical and theoretical point of view.</li>
-<li>This wikipedia <a href="https://en.wikipedia.org/wiki/Comparison_of_programming_languages_by_type_system">article</a> comparing type systems of popular programming language.</li>
-<li>Andrew Myers lecture notes on the <a href="http://www.cs.cornell.edu/courses/cs6110/2013sp/lectures/lec25-sp13.pdf">simply typed lambda calculus</a>.</li>
-<li>The standard reference: Benjamin Pierce's Book on <a href="http://ropas.snu.ac.kr/~kwang/520/pierce_book.pdf">Type Systems for Programming Languages</a>.</li>
+<li><p>Lazy loading of relationships: properties (both static and object-bound) of module classes and objects are instrumented. This means that accessing them triggers a python hook defined within SQLAlchemy, which can modify how the access work. In particular, for object-bound attributes matching static attributes of relationships (e.g. artist.albums), this hook checks whether the relationship was previously loaded, and loads it from the database using SQL queries if it needs to, before returning the result. This can be achieved via reflection (e.g. by overriding __getattr__).</p>
+</li>
+<li><p>Migrations and schema consistency: SQLAlchemy builds a graph-like data structure that stores the defined modules and their dependencies. This is done via the metaclass. This gives SQLAlchemy the chance to check whether the schema has been modified after the database was created, since it can also query the database for schematic information, and compare the two. This gives SQLAlchemy the ability to generate and manage SQL statements for altering the schema. Because of how critical and dangerous schema editing can be, SQLAlchemy generate python files called "migrations", that can be run via SQLAlchemy manaully, to generate and execute SQL statments for altering the schema, within safe transaction blocks. You can read more about this <a href="https://alembic.sqlalchemy.org/en/latest/tutorial.html">here</a>.</p>
+</li>
 </ol>
 
 </div>

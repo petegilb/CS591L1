@@ -2,7 +2,7 @@
 <html>
 <head><meta charset="utf-8" />
 
-<title>lecture-12-type-systems</title>
+<title>Project-3</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
@@ -13077,248 +13077,28 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Lecture-12---Null-Safe-Variables-and-Type-Systems">Lecture 12 - Null-Safe Variables and Type Systems<a class="anchor-link" href="#Lecture-12---Null-Safe-Variables-and-Type-Systems">&#182;</a></h1>
+<h1 id="Project-3">Project 3<a class="anchor-link" href="#Project-3">&#182;</a></h1>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>In this lecture, we will look at the solutions to <a href="https://kinanbab.github.io/CS591L1/website/html/project-2-2019-10-21.html">mini-project/homework 2</a>. Through these solutions, we will look more formally at types systems and typing rules.</p>
-<p>In this problem, you were tasked with implementing a tool that can analyze programs, and statically enforce that protected variables in these programs are never assigned null. In these notes, we will restrict ourselves to python programs.</p>
-<h3 id="Syntax">Syntax<a class="anchor-link" href="#Syntax">&#182;</a></h3><p>For simplicity, the problem restricted the constructs that the tool must support to be: (1) function definitions (2) function calls (3) variable assignment (4) and return statements. This will be the restricted syntax of our supported subset of the python language:</p>
-
-<pre><code>program := statement*
-statement := functionDefinition | functionCall | assignmentStatement | returnStatement
-
-functionDefinition := 'def' identifier '(' (identifier ( ',' identifier )* )? ')' ':' statement*
-functionCall := identifier '(' (expression ( ',' expression )* ) ? ')'
-assignmentStatement := identifier '=' expression
-returnStatement := 'return' expression
-
-expression := numericaLiteral | stringLiteral | 'None' | identifier | functionCall
-...</code></pre>
-<h3 id="Semantics">Semantics<a class="anchor-link" href="#Semantics">&#182;</a></h3><p>The problem relies on regular python semantics. These can be formally defined in many ways. We will not attempt to formalize them here. The semantics are more or less obvious due to the extreme restrictions on our syntax. Note that in a formal tool with associated formal proofs the semantics need to be defined rigorously.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Null-Safety">Null-Safety<a class="anchor-link" href="#Null-Safety">&#182;</a></h2><p>The problem definition outlines the different cases that the tool must check for. These cases are shown in an intuitive way in the problem definition for simplicity, and appear ad-hoc. However, they are not.</p>
-<p>One way to produce such list of cases is to go over all combinations of statements allowed by the syntax, look at their associated formal semantics, and list charactristics of which combinations are forbidden. This was indeed our thought process while creating the homework description.</p>
-<p>Think of the restricted sytnax (and associated semantics) shown above. Which of the statements can affect null-safety? Null-safety is a property of varaibles. Therefore, the statements that can affect it are statements that change the value assigned to a variable.</p>
-<p>The most obvious case is variable assignment. It can assign None directly to a varaible, or indirectly by assigning a variable or expression whose value is really None. This is the first case our tool must check for. Note that this already creates a first difficulty. We need to devise a way that allows us to determine if a variable is None or not to be able to check assignments to other variables, as well as a similar way to determine if a function call returns None or not.</p>
-<p>The second case is more implicit: function calling. When a function is called, the given arguments are assigned to the function parameters. If some of the function parameters are protected, then the function cannot be called in a way that sets these parameters to None, either directly (by passing None explicitly) or indirectly (by passing an expressions whose value is None). We are faced with the same difficulty here, since arguments in a function call can be a variable or an expression.</p>
-<p>In general, determining if an expression is None or not with absolute accuracy is undecidable. However, we can be conservative. We can come up with an approach that detects None expressions always, but may mistake some expressions that are not None as None expressions. Another way to describe such an approach is to say that it errors on the side of caution, when it cannot determine if an expression is None or not, it will assume it is None to be safe.</p>
-<p>This is one fundemental idea behind type systems in programming languages. A strongly typed programming language can sometimes restrict the behavior of the programmer in certain cases when the type checker cannot really determine if the expressions match up to the right type. In such cases, the programmer is required to perform some additional work to convince the type checker that things are ok, or to tell the type checker to accept the expressions, one example is type casting (e.g. in Java or C++).</p>
-<p>The problem does not require that the tool be implemented using types. Mainly because python is not statically typed, and it will be too cumbersome to change it to support better static typing for null-safety. Instead, the problem suggests a different approach, variables (and functions) whose names start with '_n_' are assumed to be protected (i.e. have a null-safe types), while other are assumed to be unprotected (i.e. have a nullable type).</p>
-<p>This approache is common in many program analysis tools. Although it may be specified differently. In our case, we require the programmer to input some helpful annotations about the type of variables via their names. Other tools may ask the programmer to input such information using special comments, special syntax, decorators or annotations, etc.</p>
-<p>Finally, this approache gives us a third case to consider. A function that is marked as null-safe (i.e starts with '_n_') cannot return None (either directly or indirectly via an unsafe expression). Therefore, our tool must look at return statements as well. Note that this solves our previous difficulties: we can now check if a variable or function is safe by checking its name.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Type-Systems-and-Typing-Rules">Type Systems and Typing Rules<a class="anchor-link" href="#Type-Systems-and-Typing-Rules">&#182;</a></h1><p>We can formalize the cases we describe above as rules for our tool. In a more formal setting, we can think of these rules as typing rules indicating how a type checker should work, or proof rules indicating how a reasoning engine should work.</p>
-<p>The syntax commonly used for such a rule is simple. Every rule consists of a single horizontal line. Above the line, several assumptions can be written, while a single conclusion must be written below it. Such a rule indicates that if the assumptions are met, the conclusion must be valid.</p>
-<p>In the context of a proof rule or a logic rule, the conclusion is a statement that is guaranteed to be true if the assumptions can be shown to be true using the same or other rules in the system. In the context of type systems, such a rule indicates that if the constructs in the assumptions are shown to have the specified types (using rules of the system), then the construct in the statement is shown to have the desired type.</p>
-<p>Here is a simple example in the context of type systems. The expression 'x + y' can be shown to have type number if both x and y are numbers, while it can shown to be of type string if one of them is a string.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(x) = number, &nbsp; type(y) = number
-    </span> <br/>
-    type(x + y) = number
-</div> <br> <br> <br>
-
-<div style="clear: both; float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(x) = string
-    </span> <br/>
-    type(x + y) = string
-</div><div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(y) = string
-    </span> <br/>
-    type(x + y) = string
-</div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>The way these rules are defined above is very restrictive and is generally unsufficient to describe interesting type systems. Particularly, it cannot describe any dynamic type system, where variables may have different types in different pieces of the program, or depending on the program execution. For example, a program that sets x to a number if some condition is true, or to a string otherwise.</p>
-<p>This unsufficiency is due to the fact that the type of any variable is set in absolute terms in these rules, not relative to the program execution or the position in the program.</p>
-<p>This unsufficiency is addressed in real type systems by relying on an environemnt or a context: this environment can store information about the program being analyzed (such as the position in the program), but most importantly, can also store the <strong>current</strong> types of constructs in the language.</p>
-<p>We show an example of this below. The example uses formal notations that are the convention when discussing type systems: &Gamma; is the name we give to our current environment, '&lt;variable&gt; : &lt;type&gt;' means that the variable has the given type, &#8866; (read turnstile) means that the environment provided on the left dictates that the expression on the right side is of the given type.</p>
-<p>The first rule is very simple, it indicates that the type of any expression or variable (call it x) is the same type as what the environment indicates it to be (call it t).</p>
-<p>The second rule is more interesting and can be difficult to interpret. Rules of this kind are generally called sequence rules. We want to type a program made out of two statements, the first sets some variable x1 to be some expression exp1, and the second is exp2. If exp1 has type t1, and if exp2 has type t2 when x has type t1, then exp2 in the sequence can be typed to t2.</p>
-<p>The interesting part of this rule is the second assumption above the line. Note that the environemnt in that assumption is extended with associating x1 with type t1. This reflects that the previous statement assigned exp1 to x1, and exp1 is of type t1.</p>
-<p>The last rule is a direct translation of the first rule above using our new formal notation.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>Rule 1: <div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    x: t &isin; &Gamma;
-    </span> <br/>
-    &Gamma; &#8866; x: t
-</div> <br> <br> <br></p>
-<p>Rule 2: <div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    &Gamma; &#8866; exp1: t1, &nbsp; &nbsp; &Gamma; &cup; {x1: t1} &#8866; exp2: t2
-    </span> <br/>
-    &Gamma; &#8866; 'x1 = exp1; exp2': t2
-</div> <br> <br> <br></p>
-<p>Rule 3:</p>
-<div style="clear: both; float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    &Gamma; &#8866; x: number, &nbsp; &nbsp; &Gamma; &#8866; y: number
-    </span> <br/>
-    &Gamma; &#8866; x + y: number
-</div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Null-Safety-Type-System">Null-Safety Type System<a class="anchor-link" href="#Null-Safety-Type-System">&#182;</a></h1><p>Now, we can formally define the cases described above for problem 1, using our new formal notation for typing rules.</p>
-<p>Our rules do not require an environment, this is because we can determine whether a variable or function is protected statically using its name, and because variables and functions are either always protected, or are never protected (they do not change during execution).</p>
-<p>This is intentional on our part when we were desiging the problem. Since we have no need for an environment or context. The implementation you had to for the tool can be simple. It does not need to keep track of some environment table and update it continously as the tool analyzes the program.</p>
-<p>Another benefit is that we can look at statements independently of one another. Since previous statements do not really affect with the current statement is valid or not.</p>
-<p>Our system has two types: nullable which means that the variable or function can be None, null-safe which means that the variable or function are protected, and valid which means that a given statement is valid and does not break null-safety. Any statement that cannot be typed is assumed to be invalid, and should be rejected by the solution.</p>
-<h4> Null-Safe Expressions Rules:</h4>
-We start with the simplest rules in order: variables and functions with names starting with \_n\_ are null-safe, as well as numbers and strings. Note that a null-safe function should also return a null-safe value.
-
-<p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    x starts with _n_
-    </span> <br/>
-    &#8866; x: null-safe
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    f starts with _n_ , &nbsp; &nbsp; &forall; i( &#8866; s_i: valid), &nbsp; &nbsp; &#8866; e: null-safe
-    </span> <br/>
-    &#8866; 'f(param_1,..., param_n): s_1 ... s_n return e': null-safe
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    </span> <br/>
-    &#8866; all integers and strings: null-safe
-</div>
-<div style="clear: both;"></div>
-
-<h4> Nullable Expressions Rules:</h4><p>Next, we define unsafe variables and functions. We do not restrict such functions, they can return anything (or not contain a return statement at all), hence the optional [return e] at the end.</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    x does not start with _n_
-    </span> <br/>
-    &#8866; x: nullable
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &nbsp; &nbsp; &nbsp; f does not start with _n_, &nbsp; &nbsp; &forall; i( &#8866; s_i: valid) &nbsp;
-    </span> <br/>
-    &#8866; 'f(param_1,..., param_n): s_1 ... s_n [return e]' :  nullable
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    </span> <br/>
-    &#8866; None: nullable
-</div>
-<div style="clear: both;"></div><p>Note that the rules that describe function definitions above require that every statement in the function body is valid.</p>
-<h4> Assignments Rules:</h4><p>Now, we can define valid assignments: these include null-safe assignments to protected variables, or any assignment to a nullable variables.</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; x: null-safe, &nbsp; &nbsp; &#8866; e: null-safe
-    </span> <br/>
-    &#8866; 'x = e': valid
-</div><div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; x: nullable
-    </span> <br/>
-    &#8866; 'x = e': valid
-</div>
-<div style="clear: both;"></div><h4> Function Call Rule:</h4>
-So far, our rules cover almost all of our syntax: they include assignments, function definitions, and primitive expressions. However, they do not include function calls yet. We provide the final rule for that below: it requires that any protected parameter in the function definition is passed a null-safe expression in the function call. The rule gives the function call the same type as the function definition (either nullable or null-safe).
-
-<p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; 'f(param_1, ..., param_n): ...': T, &nbsp; &nbsp; &forall; i(&#8866; param_i: null-safe &rarr; &#8866; e_i: null-safe)
-    </span> <br/>
-    &#8866; 'f(e_1, ..., e_n)': T
-</div>
-<div style="clear: both;"></div>
-
-<h4> Program Rule:</h4><p>Finally, we say that a program is valid in our type system, if every statement in it is valid. Note that some statements (like a function call) will have type null-safe or nullable even when valid. So our rule must allow that as well. Another way to phrase this rule is to say that the whole program is typable (i.e. valid) if every statement in it is typable (i.e. has a type).</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &nbsp; &nbsp; &nbsp; &forall; i(&#8866; s_i: T_i) &nbsp; &nbsp; &nbsp; where T_1, ..., T_n &isin; {valid, null-safe, nullable}
-    </span> <br/>
-    &#8866; 's_1 ... s_n': valid
-</div>
-<div style="clear: both;"></div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Example-derivation">Example derivation<a class="anchor-link" href="#Example-derivation">&#182;</a></h2><p>The typing rules defined above can be implemented by an automated tool (similar to your solutions for problem 1), that checks if a given program is valid. It can also be used by hand. If the rules can be applied to <strong>derive</strong> that a given program is valid, then we accept the program to be valid. Otherwise, we say it is invalid.</p>
-<p>Here is one simple example program:</p>
-
-<pre><code>_n_x = 10
-y = None</code></pre>
-<p>We can show that this program is valid as follows:</p>
+<p><strong>Due: Wednesday 27 Nov 2019 11:59PM</strong></p>
+<p>This project's goal is to give you some practice using some of the libraries and use cases we are going through in class. It has the following learning outcomes:</p>
 <ol>
-<li>First, note that the only rule we can apply to derive the validity of the <strong>entire</strong> program is the last program rule. However, we can only apply it if we show that every statement in the program is valid first.</li>
-<li>The first statement can be shown to be valid using the first assignment rule, since _n_x has type null-safe by the very first rule in our system, and 10 is also null-safe by the third rule.</li>
-<li>The second statement can be shown to be valid by the second assignment rule, since y has type nullable by the first nullable rule.</li>
-<li>Using 2 and 3 as assumptions, we can apply the program rule to show the program is valid.</li>
+<li>Make you comfortable using JIFF, SQLAlchemy, and CILK.</li>
+<li>Give you hands-on experience with MPC, ORM/Database programming, and parallel programming.</li>
+<li>Demonstrate differences between MPC/parallel programs and their non-secure/sequential counter parts.</li>
+<li>Demonstrate the effectivness of certain embedding and programming languages techniques, as well as API design, on the programmers experience.</li>
 </ol>
-<p>We can derive the validity of more complicated programs in the same way, using a bottom-up approach, where we type building blocks of every statement first, then use these types as assumptions to type the statement next, and so on.</p>
-<p>On the other hand, the following program cannot be typed in our system:</p>
-
-<pre><code>_n_x = None</code></pre>
-<p>The only way to type this program will be to use the first assignment rule to show the validity of the statement. However, that rule requires that the assigned expression have type null-safe, but None cannot be assigned type null-safe with any of the rules we have above.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Correctness-/-Soundness">Correctness / Soundness<a class="anchor-link" href="#Correctness-/-Soundness">&#182;</a></h2><p>Type systems such as the one we defined above can be complex, and may contain many rules. It is non-trivial to design such a type system correctly.</p>
-<p>Imagine if we made some mistake in our rules above, that allow us to type 'None' as null-safe. In such a case, our buggy type system will be useless. It will be able to type anything as valid!</p>
-<p>Therefore, type system designers often attempt to formally prove that their type system is correct (the technical word is sound). These proofs are usually long and tedious, but not very deep. Sometimes, automated reasoning tools (such as interactive theorem provers) are used to check these proofs, to ensure that the proofs themselves do not have bugs.</p>
-<p>Generally, such proofs work via induction on the syntax of the language. In other words, it tries to prove the soundness of the type system for <strong>all</strong> combinations of valid programs according to the syntax. The proof starts with simple syntax constructs first (e.g. expressions or assignments), which will constitute the base case in the induction, and move to more complicated constructs afterwards (e.g. a function definition that contains several statements in its body) later, which will constitute the inductive steps.</p>
-<p>Every case in the proof refers back to the formal semantics of the language, to show that every typing rule or derivation is consistent with these semantics.</p>
-<p>Traditionally, soundness of type systems is defined as two properties: type preservation and progress. The first requires that if some expression is assigned some type using the typing rules, then evaluating that expression must yield a value (or a new expression) that retains that type. The second states that expressions that can be typed using the typing rules, and which are not values, can always be evaluated further. This does not guarantee termination (since the evaluation can yield a new expression ad infinity), but does guarantee that the program never gets stuck in some invalid state.</p>
-<p>We omit a formal proof for our null-safe type system above because we do not have such formal semantics.</p>
+<p><strong>Submission:</strong> This mini-project consists of three problems. Please submit your solutions through this Google Form: <a href="https://forms.gle/Spps1b71ZU8ndAFu7">https://forms.gle/Spps1b71ZU8ndAFu7</a> <strong>The solution of each problem should be submitted as a different Zip file containing your solution files. Your files should have the format described in each problem.</strong></p>
+<p><strong>IMPORTANT: do not include the jiff git submodule (\&lt;course-repo&gt;/project-3/problem1/jiff) in your submission!</strong></p>
+<p><strong>Programming Languages:</strong> You will have to use Javascript, Python, and a little C for problems 1, 2, and 3 respectively.</p>
+<p><strong>Collaboration:</strong> You should solve the problems individually. You are allowed to discuss the problems and your ideas with classmates, but you are prohibited from sharing or copying your solution code (in whole or part). You are free to use any ideas or code you find online.</p>
+<p><strong>Grading:</strong> To receive full credit, you need only to solve any 2 problems of the three below. Choose whichever ones you find more interesting. You can solve all 3 problems for bonus credit.</p>
+<p>The grade assigned to each part is displayed next to its description. You will receive full credit if your solution meets all the requirements in the description and passes our correctness tests. You will receive partial credit for parts that are not completely solved or that fail some tests. In addition, you can receive bonus points for cleaner or more efficient solutions, as specified in each problem.</p>
+<p>Feel free to ask any questions on Piazza. Remember, Piazza participation = extra credits!</p>
 
 </div>
 </div>
@@ -13326,13 +13106,167 @@ y = None</code></pre>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Further-Reading">Further Reading<a class="anchor-link" href="#Further-Reading">&#182;</a></h1><p>The area of type systems and type theory is very large. If you are interesting, you can look at any of the following resources, ordered by how in-depth they are:</p>
+<h2 id="Problem-1---JIFF-(50-points)">Problem 1 - JIFF (50 points)<a class="anchor-link" href="#Problem-1---JIFF-(50-points)">&#182;</a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>In this problem, you task is to implement an MPC version of blackjack using JIFF. You can find all the files you need for this problem in the <a href="https://github.com/KinanBab/CS591L1/tree/master/project-3/">course github repo</a>.</p>
+<h3 id="Motivation">Motivation<a class="anchor-link" href="#Motivation">&#182;</a></h3><p>A big problem with several card and board games is cheating. Most of these games require each player to keep a secret state, and do operations consistent with it. Sometimes, it is difficult to check if the operations were indeed consistent without revealing the secret state.</p>
+<p>One example is blackjack. This is a card game between a dealer and a player. The dealer is responsible with providing the player with <strong>random</strong> cards. However, if the dealer does not shuffle the cards properly, or can see the cards as they are being served. The dealer is almost always guaranteed to win. This is a problem with in-person blackjack, as certain dealers may be very skilled with shuffling and marking cards, but it is a bigger problem with electronic blackjack, since the dealer's computer has access to all the information about the cards.</p>
+<p>To resolve this issue, we will use MPC. The dealer and player will jointly sample cards randomly using MPC, so that neither of them knows which cards the other got.</p>
+<h3 id="Rules">Rules<a class="anchor-link" href="#Rules">&#182;</a></h3><p>Blackjack is a simple game with a few rules. You can play it online to learn the rules (for example <a href="https://www.arkadium.com/games/blackjack/">here</a>). We will not support any betting in our implementation. It is strictly for fun. We will only consider one player and one dealer. The dealer will have id 1, and the player will have id 2. We will also consider slightely simpler rules:</p>
+<h5 id="Setup-phase:-(25-points)">Setup phase: (25 points)<a class="anchor-link" href="#Setup-phase:-(25-points)">&#182;</a></h5><ol>
+<li>We have a collection of cards with numerical values (more on this later).</li>
+<li>At the start of the game, the player is given a random card, then the dealer is given a random card. Both cards are shown to both players (they are public).</li>
+<li>Then, the player is given another random public card, while the dealer is given a random secret card, that no one can see yet.</li>
+</ol>
+<h5 id="Player's-turn:-(15-points)">Player's turn: (15 points)<a class="anchor-link" href="#Player's-turn:-(15-points)">&#182;</a></h5><ol>
+<li>Now it is the player's turn. The player looks at their card, and can choose either to receive another random card or to stop. All received cards are public.</li>
+<li>This is repeated until the player chooses to stop. If the player card values exceed 21, the player looses immediately.</li>
+<li>If the player decides to stop, and their cards value do not exceed 21, then it is the dealer's turn.</li>
+</ol>
+<h5 id="Dealer's-turn:-(10-points)">Dealer's turn: (10 points)<a class="anchor-link" href="#Dealer's-turn:-(10-points)">&#182;</a></h5><ol>
+<li>The dealer' other card is revealed to everyone.</li>
+<li>If the value of the dealer's cards is less than 17, the dealer must take another random card. If it is greater or equal to 17, the dealer must stop. This is repeated until 17 or greater is reached.</li>
+<li>If the dealer's cards value exceeds 21, they loose. Otherwise, the one with the highest value wins. If both player and dealer have the same value, then it is a tie.</li>
+</ol>
+<h3 id="Interface">Interface<a class="anchor-link" href="#Interface">&#182;</a></h3><p>To keep things simple, you can implement the game as a command line game with a simple UI. The basic building blocks for this UI is given to you in <a href="https://github.com/KinanBab/CS591L1/tree/master/project-3/Problem1/UI.js">UI.js</a>. The UI.js file contains usage sample to demonstrate how to use its API. You can also run it using <code>node UI.js</code>. This file provides four functions.</p>
 <ol>
-<li>This wikipedia <a href="https://en.wikipedia.org/wiki/Type_system">article</a> with an overview on types from a practical and theoretical point of view.</li>
-<li>This wikipedia <a href="https://en.wikipedia.org/wiki/Comparison_of_programming_languages_by_type_system">article</a> comparing type systems of popular programming language.</li>
-<li>Andrew Myers lecture notes on the <a href="http://www.cs.cornell.edu/courses/cs6110/2013sp/lectures/lec25-sp13.pdf">simply typed lambda calculus</a>.</li>
-<li>The standard reference: Benjamin Pierce's Book on <a href="http://ropas.snu.ac.kr/~kwang/520/pierce_book.pdf">Type Systems for Programming Languages</a>.</li>
+<li>display(dealers_hand, players_hand): displays the two hands in a nice way, each hand is an array of strings or numbers.</li>
+<li>readBoolean(): prompts the player with a message asking whether to take a new card or stop. Returns a promise that resolves to true if the user asks for a new card, or false otherwise.</li>
+<li>clear(): clears the screen.</li>
+<li>stop(): stops the interface, use this when everything is done to close the application.</li>
 </ol>
+<p>Depending on the user's input through the UI, certain code/actions (like sampling) must be performed by both players. The player code must communicate the user's input to the dealer. JIFF provides an <code>emit</code> and <code>listen</code> API that supports such communication. Sample usage is shown in the given skeleton files.</p>
+<h3 id="MPC">MPC<a class="anchor-link" href="#MPC">&#182;</a></h3><p>The MPC component of this problem is really random sampling, to ensure that cards are indeed random. JIFF provides a <code>&lt;instance&gt;.bits.rejection_sampling(...)</code> function, that allows parties to jointly sample a uniform number in a specified range using MPC. The problem files contain sample usage of this function to demonstrate how it works.</p>
+<p>Note that this function by itself will not be sufficient to achieve true random sampling: after the first card is drawn randomly, consequent random draws should never draw that same card again! This means that you have to store all the cards that were drawn before in some array, and every time a new draw is made, make sure that it is not in that array, if it is, you will have to call rejection_sampling again, until the card drawn is not in the array.</p>
+<p><strong>HINT: most cards are public, only some are secret. Think about which ones are, and try to do most of the comparisons to check if a card has been seen before or not in the clear (not under MPC).</strong></p>
+<h3 id="Cards">Cards<a class="anchor-link" href="#Cards">&#182;</a></h3><p>We want to use a single deck of cards for Blackjack. A card consists of two things: a suite and a value. Cards generally range between an ACE to a king. For our simplified version of blackjack, we will consider an ace to be 1, a Jack, Queen and King to be 11, 12, 13 respectively, the other cards range between 2-10 inclusive. For a total of 13 different values. Decks usually have 4 suites in them, to simplify things, we will refer to them using numbers 0-3 inclusive.</p>
+<p>To simplify things, your code can work with suites and values as plain numbers as above. You may also display them to the user that way, so you do not have to worry about representing special cards (J, Q, K, and Ace) or suites as strings.</p>
+<h3 id="Implementation-Steps">Implementation Steps<a class="anchor-link" href="#Implementation-Steps">&#182;</a></h3><p>First, Clone the course's github repo and update all its submodules and install the dependencies.</p>
+<div class="highlight"><pre><span></span>git clone https://github.com/KinanBab/CS591L1
+git submodule init
+git submodule update <span class="c1"># may take a couple of minutes</span>
+<span class="nb">cd</span> project-3/Problem1
+npm install
+</pre></div>
+<p>Go to project-3/problem-1 diretory: We provide two skeleton files for you there: <a href="https://github.com/KinanBab/CS591L1/tree/master/project-3/Problem1/player.js">player.js</a>, <a href="https://github.com/KinanBab/CS591L1/tree/master/project-3/Problem1/dealer.js">dealer.js</a>. Additionally, we provide complete implementations of the needed JIFF server <a href="https://github.com/KinanBab/CS591L1/tree/master/project-3/Problem1/server.js">server.js</a> and interface <a href="https://github.com/KinanBab/CS591L1/tree/master/project-3/Problem1/UI.js">UI.js</a>.</p>
+<p>You can run these files to see what the code samples in them do. You can also run the UI file using <code>node UI.js</code>.</p>
+<div class="highlight"><pre><span></span><span class="c1"># run each of these commands in a different terminal</span>
+node server.js
+node dealer.js
+node player.js
+</pre></div>
+<p>We suggest you follow these steps when trying to solve this problem:</p>
+<ol>
+<li>Look at the provided files and run them, understand the rules as above, try blackjack out online or on a piece of paper.</li>
+<li>Ignore suites, and consider only a single set of cards between 1 and 13 inclusive. Implement the setup phase with these cards only.</li>
+<li>Add the suites into your implementation. You can do this by sampling a card using two calls to rejection_sampling: the first samples the suite from [0-3], and the second samples the value from [1-13]. Make sure the setup phase is still correct.</li>
+<li>Organize your code so that card drawing, including checking that a card has not been drawn before, is factored out into a single re-usable functions.</li>
+<li>Implement the player's phase, use the card drawing function described above.</li>
+<li>Implement the dealer's phase.</li>
+</ol>
+<p><strong>HINT: You only need to perform secret comparison between a newly drawn card and the dealer's secret card. All other comparisons can be performed outside MPC. Notice that in the dealer's turn, the secret card is revealed!</strong></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Problem-2---SQLAlchemy-(50-points)">Problem 2 - SQLAlchemy (50 points)<a class="anchor-link" href="#Problem-2---SQLAlchemy-(50-points)">&#182;</a></h1><p>In this problem, you will create a simple database schema, insert data into it, and run a few queries against it. Use the official <a href="https://docs.sqlalchemy.org/en/13/orm/tutorial.html">sqlalchemy tutorial</a> and the lecture notes as resources to help you with this problem.</p>
+<p>The database will store information about NFL seasons 2010-2015, including results of all regular season games, and the teams roasters for every season.</p>
+<p>For this problem, you have to:</p>
+<ol>
+<li>Connects to an in-memory SQLite database.</li>
+<li>Defines the schema below as sqlalchemy classes, and creates the schema in the database.</li>
+<li>Inserts the data from the given csv files into the database using sqlalchemy.</li>
+<li>Run the designated query using sqlalchemy.</li>
+</ol>
+<p>You can organize your code into several python files for clarity. You should provide a <code>problem2.py</code> python file that contains the main entry point to your program, imports any other python file(s), and performs the 4 tasks above in order.</p>
+<h3 id="Schema-(15-points)">Schema (15 points)<a class="anchor-link" href="#Schema-(15-points)">&#182;</a></h3><p>You need to create the following tables with the following schema:</p>
+<p><strong>Teams:</strong></p>
+<ol>
+<li>Team id: auto-generated integer, primary key</li>
+<li>Team name: string, unique</li>
+<li>Players: relationship listing the players of the team per year</li>
+</ol>
+<p><strong>Players:</strong></p>
+<ol>
+<li>Player id: auto-generated integer, primary key</li>
+<li>Player name: string, unique</li>
+<li>Position: string</li>
+<li>Teams: relationship listing the teams of the player per year</li>
+</ol>
+<p><em>Note: a player may change position throughout his career. To simplify things, ignore any discrepancies like that, and use the first position you encounter for every player.</em></p>
+<p><strong>Player/Teams Association Table:</strong></p>
+<ol>
+<li>Association id: auto-generated integer, primary key</li>
+<li>Player id: integer, foreign key</li>
+<li>Team id: integer, foreign key</li>
+<li>Season: integer (2010-2015)</li>
+</ol>
+<p>Columns 2, 3, and 4 should be unique together.</p>
+<p><strong>Games:</strong></p>
+<ol>
+<li>Game id: auto-generated integer, primary key.</li>
+<li>Home team id: integer, foreign key</li>
+<li>Away team id: integer, a different foreign key</li>
+<li>Season: integer (2010-2015)</li>
+<li>Week: integer (1-17)</li>
+<li>Home score: integer</li>
+<li>Away score: integer</li>
+<li>Home team: relationship with teams</li>
+<li>Away team: a different relationship with teams</li>
+</ol>
+<p><strong>Remember: Relationships are logical sqlalchemy entities that do not create physical columns. Relationships are defined based on physical foreign key columns.</strong></p>
+<h3 id="Data-(20-points)">Data (20 points)<a class="anchor-link" href="#Data-(20-points)">&#182;</a></h3><p>We provide you with CSV files containing the data required to fill the above database. You must write and use python functions to read this data from the CSV files and insert it into the database via sqlalchemy. The csv files are available at the <a href="https://github.com/KinanBab/CS591L1/tree/master/project-3/Problem2/data/">course github repo</a>.</p>
+<p>Note that the csv files contain many columns that are not contained in our schema above, such columns should be ignored. Additionally, the csv files contain unique identifiers for games and players, you are free to keep the same ids, or ignored them, and use auto-generated ones from sqlalchemy.</p>
+<p>For every season, we provide to csv files: reg_games and reg_roster. The first is a list of all the regular season games played that season, including team names and scores. The second is a list of all the players in that regular season and their corresponding team.</p>
+<p>Hint: Your script should read the reg_games files first, and use them to fill the teams and games tables (when you encounter a game with a team that does not exist in the database, insert it into the teams tables!). Your script should then read the reg_roster files and fill in the players and player/teams association table.</p>
+<h3 id="Query-(15-points)">Query (15 points)<a class="anchor-link" href="#Query-(15-points)">&#182;</a></h3><p>After all data has been inserted, you must implement these two queries using sqlalchemy and run them, see if you can predict their results ;)</p>
+<ol>
+<li>Find the three teams with largest difference between total points scored and conceded overall in all the seasons combined.</li>
+<li>Find the ten players with the most number of wins overall in all the seasons combined. If a player is on a team's roster during a season, consider him to have won all the games that team won in that season.</li>
+</ol>
+<p>Try to encode most of the query using sqlalchemy API so it runs on the server side. You can code part of the query in python outside of sqlachemy if you need to, but try to keep it to a minimal. Clean and optimal solutions (efficiency-wise) get bonus points!</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Problem-3---CILK-(50-points)">Problem 3 - CILK (50 points)<a class="anchor-link" href="#Problem-3---CILK-(50-points)">&#182;</a></h1><p>In this problem, you will implement, analyze, and benchmark a parallel algorithm using CILK and C++.</p>
+<p>Use the CILK lecture note and <a href="http://cilk.mit.edu/">CILK Hub</a> as resources to help you in your solutions.</p>
+<p>You need to produce four files for a complete solution:</p>
+<ol>
+<li>mult.cpp</li>
+<li>analysis.pdf|doc|txt</li>
+<li>plot_n.png|jpg</li>
+<li>plot_w.png|jpg</li>
+</ol>
+<h3 id="Implementation-(20-points)">Implementation (20 points)<a class="anchor-link" href="#Implementation-(20-points)">&#182;</a></h3><p>You should implement an efficient parallel inner-product function using CILK, and use it to implement efficient matrix-vector multiplication.</p>
+<h5 id="Inner-product">Inner-product<a class="anchor-link" href="#Inner-product">&#182;</a></h5><p>You must implement an inner-product function with header: int inner(int n, int* vec1, int* vec2), where n is the length of both vectors.</p>
+<p>Your function must behave as follows:</p>
+<ol>
+<li>if n is less than 10, it performs the inner product sequentially.</li>
+<li>otherwise, it must make two recursive parallel calls (using cilk_spawn), the first computes the inner produt of the first half of vectors, the second computes it for the second half, and then return the sum.</li>
+</ol>
+<h5 id="Matrix-vector-multiplication">Matrix-vector multiplication<a class="anchor-link" href="#Matrix-vector-multiplication">&#182;</a></h5><p>You must implement a matrix-vector multiplication function with header: void mult(int n, int** mat, int* vec, int* result), where vec and mat are a vector and square matrix of dimension n.</p>
+<p>Your code should compute inner product between every row i in the matrix mat and vec in parallel, and store the result at index i of the output vector. You can use a cilk_for to perform the parallelizm for you automatically.</p>
+<p>cilk_for is susceptible to a lot of implicit bottlenecks. It is important that you use cilk_for for the matrix-vector mult function, and not for the inner function, otherwise, you will not see a speed up. See <a href="https://jayconrod.com/posts/29/parallelization--harder-than-it-looks">here</a> for more details.</p>
+<h5 id="Main-function">Main function<a class="anchor-link" href="#Main-function">&#182;</a></h5><p>Your main function should take the dimension n as the first command line argument, and then generate a random vector and matrix of size n with values between 0 and 10. Your main function should then call mult(...) on these parameters.</p>
+<p>Your program must measure the time required to compute mult. Be sure to measure the time accurately: generating the random matrix and allocating arrays should not be a part of the time measurement.</p>
+<p>Your program should output the time to the console.</p>
+<h3 id="Analysis-(10-points)">Analysis (10 points)<a class="anchor-link" href="#Analysis-(10-points)">&#182;</a></h3><p>Compute the work, span, and parallelism of your program analytically as a function of n. Show your derivation in analysis.pdf|doc|txt. Choose the file format that is easiest for you!</p>
+<h3 id="Benchmarks-(20-points)">Benchmarks (20 points)<a class="anchor-link" href="#Benchmarks-(20-points)">&#182;</a></h3><p>Compile and run your program to produce benchmarking plots, and see if they match the analytical result from the analysis part.</p>
+<p>Run your program with 2 CILK workers on n = 1000, 2000, 4000, 8000. Plot n (as the x-axis) against the time (as the y-axis). Make sure to run the program several times for each value of n, and plot the average time to avoid anomalies and outliers.</p>
+<p>Run your program for n = 4000 using 1, 2, 4 (and if your computer has enough cores 8) cilk workers. Plot the result with workers being the x-axis and time being the y-axis.</p>
+<p>Produce two image files for the two plots: plot_n and plot_w respectively. Discuss whether the plots confirm the analysis from the previous part!</p>
 
 </div>
 </div>

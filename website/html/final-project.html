@@ -2,7 +2,7 @@
 <html>
 <head><meta charset="utf-8" />
 
-<title>lecture-12-type-systems</title>
+<title>Final Project</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
@@ -13077,262 +13077,25 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Lecture-12---Null-Safe-Variables-and-Type-Systems">Lecture 12 - Null-Safe Variables and Type Systems<a class="anchor-link" href="#Lecture-12---Null-Safe-Variables-and-Type-Systems">&#182;</a></h1>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>In this lecture, we will look at the solutions to <a href="https://kinanbab.github.io/CS591L1/website/html/project-2-2019-10-21.html">mini-project/homework 2</a>. Through these solutions, we will look more formally at types systems and typing rules.</p>
-<p>In this problem, you were tasked with implementing a tool that can analyze programs, and statically enforce that protected variables in these programs are never assigned null. In these notes, we will restrict ourselves to python programs.</p>
-<h3 id="Syntax">Syntax<a class="anchor-link" href="#Syntax">&#182;</a></h3><p>For simplicity, the problem restricted the constructs that the tool must support to be: (1) function definitions (2) function calls (3) variable assignment (4) and return statements. This will be the restricted syntax of our supported subset of the python language:</p>
-
-<pre><code>program := statement*
-statement := functionDefinition | functionCall | assignmentStatement | returnStatement
-
-functionDefinition := 'def' identifier '(' (identifier ( ',' identifier )* )? ')' ':' statement*
-functionCall := identifier '(' (expression ( ',' expression )* ) ? ')'
-assignmentStatement := identifier '=' expression
-returnStatement := 'return' expression
-
-expression := numericaLiteral | stringLiteral | 'None' | identifier | functionCall
-...</code></pre>
-<h3 id="Semantics">Semantics<a class="anchor-link" href="#Semantics">&#182;</a></h3><p>The problem relies on regular python semantics. These can be formally defined in many ways. We will not attempt to formalize them here. The semantics are more or less obvious due to the extreme restrictions on our syntax. Note that in a formal tool with associated formal proofs the semantics need to be defined rigorously.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Null-Safety">Null-Safety<a class="anchor-link" href="#Null-Safety">&#182;</a></h2><p>The problem definition outlines the different cases that the tool must check for. These cases are shown in an intuitive way in the problem definition for simplicity, and appear ad-hoc. However, they are not.</p>
-<p>One way to produce such list of cases is to go over all combinations of statements allowed by the syntax, look at their associated formal semantics, and list charactristics of which combinations are forbidden. This was indeed our thought process while creating the homework description.</p>
-<p>Think of the restricted sytnax (and associated semantics) shown above. Which of the statements can affect null-safety? Null-safety is a property of varaibles. Therefore, the statements that can affect it are statements that change the value assigned to a variable.</p>
-<p>The most obvious case is variable assignment. It can assign None directly to a varaible, or indirectly by assigning a variable or expression whose value is really None. This is the first case our tool must check for. Note that this already creates a first difficulty. We need to devise a way that allows us to determine if a variable is None or not to be able to check assignments to other variables, as well as a similar way to determine if a function call returns None or not.</p>
-<p>The second case is more implicit: function calling. When a function is called, the given arguments are assigned to the function parameters. If some of the function parameters are protected, then the function cannot be called in a way that sets these parameters to None, either directly (by passing None explicitly) or indirectly (by passing an expressions whose value is None). We are faced with the same difficulty here, since arguments in a function call can be a variable or an expression.</p>
-<p>In general, determining if an expression is None or not with absolute accuracy is undecidable. However, we can be conservative. We can come up with an approach that detects None expressions always, but may mistake some expressions that are not None as None expressions. Another way to describe such an approach is to say that it errors on the side of caution, when it cannot determine if an expression is None or not, it will assume it is None to be safe.</p>
-<p>This is one fundemental idea behind type systems in programming languages. A strongly typed programming language can sometimes restrict the behavior of the programmer in certain cases when the type checker cannot really determine if the expressions match up to the right type. In such cases, the programmer is required to perform some additional work to convince the type checker that things are ok, or to tell the type checker to accept the expressions, one example is type casting (e.g. in Java or C++).</p>
-<p>The problem does not require that the tool be implemented using types. Mainly because python is not statically typed, and it will be too cumbersome to change it to support better static typing for null-safety. Instead, the problem suggests a different approach, variables (and functions) whose names start with '_n_' are assumed to be protected (i.e. have a null-safe types), while other are assumed to be unprotected (i.e. have a nullable type).</p>
-<p>This approache is common in many program analysis tools. Although it may be specified differently. In our case, we require the programmer to input some helpful annotations about the type of variables via their names. Other tools may ask the programmer to input such information using special comments, special syntax, decorators or annotations, etc.</p>
-<p>Finally, this approache gives us a third case to consider. A function that is marked as null-safe (i.e starts with '_n_') cannot return None (either directly or indirectly via an unsafe expression). Therefore, our tool must look at return statements as well. Note that this solves our previous difficulties: we can now check if a variable or function is safe by checking its name.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Type-Systems-and-Typing-Rules">Type Systems and Typing Rules<a class="anchor-link" href="#Type-Systems-and-Typing-Rules">&#182;</a></h1><p>We can formalize the cases we describe above as rules for our tool. In a more formal setting, we can think of these rules as typing rules indicating how a type checker should work, or proof rules indicating how a reasoning engine should work.</p>
-<p>The syntax commonly used for such a rule is simple. Every rule consists of a single horizontal line. Above the line, several assumptions can be written, while a single conclusion must be written below it. Such a rule indicates that if the assumptions are met, the conclusion must be valid.</p>
-<p>In the context of a proof rule or a logic rule, the conclusion is a statement that is guaranteed to be true if the assumptions can be shown to be true using the same or other rules in the system. In the context of type systems, such a rule indicates that if the constructs in the assumptions are shown to have the specified types (using rules of the system), then the construct in the statement is shown to have the desired type.</p>
-<p>Here is a simple example in the context of type systems. The expression 'x + y' can be shown to have type number if both x and y are numbers, while it can shown to be of type string if one of them is a string.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(x) = number, &nbsp; type(y) = number
-    </span> <br/>
-    type(x + y) = number
-</div> <br> <br> <br>
-
-<div style="clear: both; float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(x) = string
-    </span> <br/>
-    type(x + y) = string
-</div><div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    type(y) = string
-    </span> <br/>
-    type(x + y) = string
-</div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>The way these rules are defined above is very restrictive and is generally unsufficient to describe interesting type systems. Particularly, it cannot describe any dynamic type system, where variables may have different types in different pieces of the program, or depending on the program execution. For example, a program that sets x to a number if some condition is true, or to a string otherwise.</p>
-<p>This unsufficiency is due to the fact that the type of any variable is set in absolute terms in these rules, not relative to the program execution or the position in the program.</p>
-<p>This unsufficiency is addressed in real type systems by relying on an environemnt or a context: this environment can store information about the program being analyzed (such as the position in the program), but most importantly, can also store the <strong>current</strong> types of constructs in the language.</p>
-<p>We show an example of this below. The example uses formal notations that are the convention when discussing type systems: &Gamma; is the name we give to our current environment, '&lt;variable&gt; : &lt;type&gt;' means that the variable has the given type, &#8866; (read turnstile) means that the environment provided on the left dictates that the expression on the right side is of the given type.</p>
-<p>The first rule is very simple, it indicates that the type of any expression or variable (call it x) is the same type as what the environment indicates it to be (call it t).</p>
-<p>The second rule is more interesting and can be difficult to interpret. Rules of this kind are generally called sequence rules. We want to type a program made out of two statements, the first sets some variable x1 to be some expression exp1, and the second is exp2. If exp1 has type t1, and if exp2 has type t2 when x has type t1, then exp2 in the sequence can be typed to t2.</p>
-<p>The interesting part of this rule is the second assumption above the line. Note that the environemnt in that assumption is extended with associating x1 with type t1. This reflects that the previous statement assigned exp1 to x1, and exp1 is of type t1.</p>
-<p>The last rule is a direct translation of the first rule above using our new formal notation.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>Rule 1: <div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    x: t &isin; &Gamma;
-    </span> <br/>
-    &Gamma; &#8866; x: t
-</div> <br> <br> <br></p>
-<p>Rule 2: <div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    &Gamma; &#8866; exp1: t1, &nbsp; &nbsp; &Gamma; &cup; {x1: t1} &#8866; exp2: t2
-    </span> <br/>
-    &Gamma; &#8866; 'x1 = exp1; exp2': t2
-</div> <br> <br> <br></p>
-<p>Rule 3:</p>
-<div style="clear: both; float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 0 5px">
-    &Gamma; &#8866; x: number, &nbsp; &nbsp; &Gamma; &#8866; y: number
-    </span> <br/>
-    &Gamma; &#8866; x + y: number
-</div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Null-Safety-Type-System">Null-Safety Type System<a class="anchor-link" href="#Null-Safety-Type-System">&#182;</a></h1><p>Now, we can formally define the cases described above for problem 1, using our new formal notation for typing rules.</p>
-<p>Our rules do not require an environment, this is because we can determine whether a variable or function is protected statically using its name, and because variables and functions are either always protected, or are never protected (they do not change during execution).</p>
-<p>This is intentional on our part when we were desiging the problem. Since we have no need for an environment or context. The implementation you had to for the tool can be simple. It does not need to keep track of some environment table and update it continously as the tool analyzes the program.</p>
-<p>Another benefit is that we can look at statements independently of one another. Since previous statements do not really affect with the current statement is valid or not.</p>
-<p>Our system has two types: nullable which means that the variable or function can be None, null-safe which means that the variable or function are protected, and valid which means that a given statement is valid and does not break null-safety. Any statement that cannot be typed is assumed to be invalid, and should be rejected by the solution.</p>
-<h4> Null-Safe Expressions Rules:</h4>
-We start with the simplest rules in order: variables and functions with names starting with \_n\_ are null-safe, as well as numbers and strings. Note that a null-safe function should also return a null-safe value.
-
-<p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    x starts with _n_
-    </span> <br/>
-    &#8866; x: null-safe
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    f starts with _n_ , &nbsp; &nbsp; &forall; i( &#8866; s_i: valid), &nbsp; &nbsp; &#8866; e: null-safe
-    </span> <br/>
-    &#8866; 'f(param_1,..., param_n): s_1 ... s_n return e': null-safe
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    </span> <br/>
-    &#8866; all integers and strings: null-safe
-</div>
-<div style="clear: both;"></div>
-
-<h4> Nullable Expressions Rules:</h4><p>Next, we define unsafe variables and functions. We do not restrict such functions, they can return anything (or not contain a return statement at all), hence the optional [return e] at the end.</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    x does not start with _n_
-    </span> <br/>
-    &#8866; x: nullable
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &nbsp; &nbsp; &nbsp; f does not start with _n_, &nbsp; &nbsp; &forall; i( &#8866; s_i: valid) &nbsp;
-    </span> <br/>
-    &#8866; 'f(param_1,..., param_n): s_1 ... s_n [return e]' :  nullable
-</div>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    </span> <br/>
-    &#8866; None: nullable
-</div>
-<div style="clear: both;"></div><p>Note that the rules that describe function definitions above require that every statement in the function body is valid.</p>
-<h4> Assignments Rules:</h4><p>Now, we can define valid assignments: these include null-safe assignments to protected variables, or any assignment to a nullable variables.</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; x: null-safe, &nbsp; &nbsp; &#8866; e: null-safe
-    </span> <br/>
-    &#8866; 'x = e': valid
-</div><div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; x: nullable
-    </span> <br/>
-    &#8866; 'x = e': valid
-</div>
-<div style="clear: both;"></div><h4> Function Call Rule:</h4>
-So far, our rules cover almost all of our syntax: they include assignments, function definitions, and primitive expressions. However, they do not include function calls yet. We provide the final rule for that below: it requires that any protected parameter in the function definition is passed a null-safe expression in the function call. The rule gives the function call the same type as the function definition (either nullable or null-safe).
-
-<p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &#8866; 'f(param_1, ..., param_n): ...': T, &nbsp; &nbsp; &forall; i(&#8866; param_i: null-safe &rarr; &#8866; e_i: null-safe)
-    </span> <br/>
-    &#8866; 'f(e_1, ..., e_n)': T
-</div>
-<div style="clear: both;"></div>
-
-<h4> Program Rule:</h4><p>Finally, we say that a program is valid in our type system, if every statement in it is valid. Note that some statements (like a function call) will have type null-safe or nullable even when valid. So our rule must allow that as well. Another way to phrase this rule is to say that the whole program is typable (i.e. valid) if every statement in it is typable (i.e. has a type).</p>
-<p><p></p></p>
-<div style="float: left; text-align: center; margin-right: 20px;">
-    <span style="border-bottom: 2px solid black; padding: 0 5px 2px 5px">
-    &nbsp; &nbsp; &nbsp; &forall; i(&#8866; s_i: T_i) &nbsp; &nbsp; &nbsp; where T_1, ..., T_n &isin; {valid, null-safe, nullable}
-    </span> <br/>
-    &#8866; 's_1 ... s_n': valid
-</div>
-<div style="clear: both;"></div>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Example-derivation">Example derivation<a class="anchor-link" href="#Example-derivation">&#182;</a></h2><p>The typing rules defined above can be implemented by an automated tool (similar to your solutions for problem 1), that checks if a given program is valid. It can also be used by hand. If the rules can be applied to <strong>derive</strong> that a given program is valid, then we accept the program to be valid. Otherwise, we say it is invalid.</p>
-<p>Here is one simple example program:</p>
-
-<pre><code>_n_x = 10
-y = None</code></pre>
-<p>We can show that this program is valid as follows:</p>
+<h1 id="Final-Project">Final Project<a class="anchor-link" href="#Final-Project">&#182;</a></h1><p>The final project is meant to be open-ended and exploratory. You are required to come up with your own ideas, so long as they fit the theme of our course and the topic categories defined below.</p>
+<h2 id="Policy">Policy<a class="anchor-link" href="#Policy">&#182;</a></h2><p>The final project is a group project. Ideally, teams should consist of 2 students. Individual work or teams of size 3 will only be accepted given reasonable justification. Team members are expected to particpate equally in the work.</p>
+<p>You are allowed to discuss project ideas, implementation, and evaluation with other students outside your team, or others outside the course, as long as you make the ideas and implementation your own. Any code or documents you submit in your project should be the result of your own work.</p>
+<p>You are more than welcome to discuss your project ideas, progress, and challenges with the teaching staff, via email, Piazza, or in-person.</p>
+<h2 id="Deliverables">Deliverables<a class="anchor-link" href="#Deliverables">&#182;</a></h2><p>You are expected to provide the following deliverables for your final project:</p>
 <ol>
-<li>First, note that the only rule we can apply to derive the validity of the <strong>entire</strong> program is the last program rule. However, we can only apply it if we show that every statement in the program is valid first.</li>
-<li>The first statement can be shown to be valid using the first assignment rule, since _n_x has type null-safe by the very first rule in our system, and 10 is also null-safe by the third rule.</li>
-<li>The second statement can be shown to be valid by the second assignment rule, since y has type nullable by the first nullable rule.</li>
-<li>Using 2 and 3 as assumptions, we can apply the program rule to show the program is valid.</li>
+<li><strong>Project Proposal (Due Thursday, 11/28/2019):</strong> 1-2 pages of text describing your project idea, why you chose it, how you roughly plan on tackling it, and how it fits the course and topic categories below. It must also clearly state how your team members are.</li>
+<li><strong>Poster Session (Tuesday, 12/17/2019 9-11am in the Hariri seminar room):</strong> You will have the oppurtonity to present your work to your classmates, the teaching staff, the Hariri institute community, and the wider audience. Please allow for time to create and design your poster, as well as printing it.</li>
+<li><strong>Final Project (Wedensday, 12/18/2019 11:59PM via email):</strong> Submission should include your code and a README or jupyter notebook file with instructions on how to run your code and how it is organized. Depending on your project topic, you may also submit other documents, including a report, datasets, plots, or other forms of evaluation.</li>
 </ol>
-<p>We can derive the validity of more complicated programs in the same way, using a bottom-up approach, where we type building blocks of every statement first, then use these types as assumptions to type the statement next, and so on.</p>
-<p>On the other hand, the following program cannot be typed in our system:</p>
-
-<pre><code>_n_x = None</code></pre>
-<p>The only way to type this program will be to use the first assignment rule to show the validity of the statement. However, that rule requires that the assigned expression have type null-safe, but None cannot be assigned type null-safe with any of the rules we have above.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Correctness-/-Soundness">Correctness / Soundness<a class="anchor-link" href="#Correctness-/-Soundness">&#182;</a></h2><p>Type systems such as the one we defined above can be complex, and may contain many rules. It is non-trivial to design such a type system correctly.</p>
-<p>Imagine if we made some mistake in our rules above, that allow us to type 'None' as null-safe. In such a case, our buggy type system will be useless. It will be able to type anything as valid!</p>
-<p>Therefore, type system designers often attempt to formally prove that their type system is correct (the technical word is sound). These proofs are usually long and tedious, but not very deep. Sometimes, automated reasoning tools (such as interactive theorem provers) are used to check these proofs, to ensure that the proofs themselves do not have bugs.</p>
-<p>Generally, such proofs work via induction on the syntax of the language. In other words, it tries to prove the soundness of the type system for <strong>all</strong> combinations of valid programs according to the syntax. The proof starts with simple syntax constructs first (e.g. expressions or assignments), which will constitute the base case in the induction, and move to more complicated constructs afterwards (e.g. a function definition that contains several statements in its body) later, which will constitute the inductive steps.</p>
-<p>Every case in the proof refers back to the formal semantics of the language, to show that every typing rule or derivation is consistent with these semantics.</p>
-<p>Traditionally, soundness of type systems is defined as two properties: type preservation and progress. The first requires that if some expression is assigned some type using the typing rules, then evaluating that expression must yield a value (or a new expression) that retains that type. The second states that expressions that can be typed using the typing rules, and which are not values, can always be evaluated further. This does not guarantee termination (since the evaluation can yield a new expression ad infinity), but does guarantee that the program never gets stuck in some invalid state.</p>
-<p>We omit a formal proof for our null-safe type system above because we do not have such formal semantics.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Further-Reading">Further Reading<a class="anchor-link" href="#Further-Reading">&#182;</a></h1><p>The area of type systems and type theory is very large. If you are interesting, you can look at any of the following resources, ordered by how in-depth they are:</p>
-<ol>
-<li>This wikipedia <a href="https://en.wikipedia.org/wiki/Type_system">article</a> with an overview on types from a practical and theoretical point of view.</li>
-<li>This wikipedia <a href="https://en.wikipedia.org/wiki/Comparison_of_programming_languages_by_type_system">article</a> comparing type systems of popular programming language.</li>
-<li>Andrew Myers lecture notes on the <a href="http://www.cs.cornell.edu/courses/cs6110/2013sp/lectures/lec25-sp13.pdf">simply typed lambda calculus</a>.</li>
-<li>The standard reference: Benjamin Pierce's Book on <a href="http://ropas.snu.ac.kr/~kwang/520/pierce_book.pdf">Type Systems for Programming Languages</a>.</li>
-</ol>
+<p>The teaching staff will check up with you and your teammates as the semester progresses, to ensure that you are on track. This may occur via Piazza, email or in-person.</p>
+<h2 id="Topic-Categories">Topic Categories<a class="anchor-link" href="#Topic-Categories">&#182;</a></h2><p>You are allowed to work on any topic that is related to the theme of our course. We categorize such topics into 4 broad categories. Your project is allowed to be within any of these cateogries, or a combination of several categories.</p>
+<p><strong>You are allowed to use any programming languages and libraries you desired.</strong></p>
+<h4 id="Embedded-Framework/Library-Design">Embedded Framework/Library Design<a class="anchor-link" href="#Embedded-Framework/Library-Design">&#182;</a></h4><p>Build your own interesting embedded framework or library for a particular application. Your library may support novel applications that do not exist yet, make existing applications easier to code, more efficient, or less error prone. Use some of the techniques learned in class in your implementation (e.g. instrumentation, metaprogramming, deep embedding).</p>
+<h4 id="Program-Analysis-or-Transformation">Program Analysis or Transformation<a class="anchor-link" href="#Program-Analysis-or-Transformation">&#182;</a></h4><p>Similar to the first project. Create some tool or library that analyzes or transforms some subset of supported programs written in your desired language or library in some interesting way. Your tool may analyze the code to find bugs or estimate certain costs, or may transform the code to improve it with regards to some metrics, or to improve the developers experience.</p>
+<h4 id="Modify-or-Extend-Existing-Embedded-Libraries">Modify or Extend Existing Embedded Libraries<a class="anchor-link" href="#Modify-or-Extend-Existing-Embedded-Libraries">&#182;</a></h4><p>Improve some existing embedded libraries, including libraries we have not seen in class. You may decide to clone the library's source code and modify it, or create your own wrapper library around it, that modifies or extends its behavior, using techniques learned in the course (e.g. inheritance, reflection, aspect-oriented programming).</p>
+<h4 id="Use-Existing-Embedded-Libraries">Use Existing Embedded Libraries<a class="anchor-link" href="#Use-Existing-Embedded-Libraries">&#182;</a></h4><p>Build interesting applications using one or more existing embedded libraries. You need to combine usage of these libraries with techniques learned from class. Employ the course's conceptual content about embeddings and paradigms, to use these libraries better.</p>
+<p>The above categories use the word "interesting" frequently. For our purposes, interesting means <strong>non-trivial</strong>, <strong>(somewhat) useful</strong>, and <strong>appropriately-sized</strong>.</p>
+<p>Use your imagination and curiousity, happy hacking!</p>
 
 </div>
 </div>

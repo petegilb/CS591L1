@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en" ng-app>
+  <head>
+    <title>Example</title>
+    <style>
+      body {
+        padding-top: 20px;
+        padding-left: 40px;
+        padding-right: 60px;
+      }
+      
+      hr {
+        margin-top: 50px;
+        margin-bottom: 50px;
+      }
+      
+      th, td {
+        min-width: 150px;
+        padding: 5px 20px 5px 20px;
+        text-align: center;
+      }
+    </style>
+    <script>
+      function showData() {
+        console.log(this.response);
+        var array = JSON.parse(this.response);
+        var HTML = "<tr><th class='col1'>Author</th><th class='col2'>Title</th></tr>";
+        for(var i = 0; i < array.length; i=i+1) {
+          HTML = HTML + "<tr><td>"+array[i].author+"</td><td>"+array[i].title+"</td></tr>";
+        }
+        document.getElementById("results").innerHTML = HTML;
+      }
+    
+      function save() {
+        var obj = { 
+          "title": document.getElementById("insert_title").value, 
+          "author": document.getElementById("insert_author").value
+        };
+        
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("POST", "/save");
+        xhttp.setRequestHeader("Content-Type", "application/json");
+        xhttp.onload = function() { alert(xhttp.responseText); };
+        xhttp.onerror = function(error) { alert(error); };
+        xhttp.send(JSON.stringify(obj));
+      }
+      
+      function get_all() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("GET", "/get_all");
+        xhttp.onload = showData;
+        xhttp.onerror = function(error) { alert(error); };
+        xhttp.send();
+      }
+      
+      function by_author() {
+        var obj = { 
+          "author": document.getElementById("search_author").value
+        };
+        
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("POST", "/by_author");
+        xhttp.setRequestHeader("Content-Type", "application/json");
+        xhttp.onload = showData;
+        xhttp.onerror = function(error) { alert(error); };
+        xhttp.send(JSON.stringify(obj));
+      }
+    </script>
+  </head>
+  <body>
+    <h1>My Small Library</h1>
+    <hr>
+    
+    <div>
+      <h2>Insert Book</h2>
+      <label for="insert_author">Book Title</label> <input id="insert_title" size="50">
+      <label for="insert_title">Author Name</label> <input id="insert_author" size="50">
+      <button onclick="save()">Save</button>  
+    </div>
+    
+    <hr>
+    
+    <div>
+      <h2>Lookup Book</h2>
+      <input placeholder="Author name" id="search_author"/> <button onclick="by_author()">Search</button> 
+      |
+      <button onclick="get_all()">Get All</button>
+      <br> <br>
+      <table id="results">
+      </table>
+    </div>
+    
+    
+  </body>
+</html>
